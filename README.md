@@ -4,6 +4,8 @@ Local, self-hosted checklist app. Node + TypeScript backend (Express), React fro
 
 Current state: foundation — secure user/pass auth is working; the checklist features are next.
 
+This is really just a low-risk test of Qwen 3.8 to see how well it builds a complete app!
+
 ## Stack
 
 | Layer     | Tech                                                        |
