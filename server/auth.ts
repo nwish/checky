@@ -21,10 +21,12 @@ export function verifyPassword(password: string, stored: string): boolean {
   return actual.length === expected.length && crypto.timingSafeEqual(actual, expected)
 }
 
-export function newSessionToken(): string {
+/** 256-bit opaque tokens (sessions, invites). base64url, ~43 chars. */
+export function newToken(): string {
   return crypto.randomBytes(32).toString('base64url')
 }
 
-export function hashSessionToken(token: string): string {
+/** Tokens are stored only as SHA-256, never in plaintext. */
+export function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex')
 }

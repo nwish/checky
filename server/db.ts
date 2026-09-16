@@ -18,7 +18,11 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL UNIQUE COLLATE NOCASE,
-    pass_hash TEXT NOT NULL,
+    pass_hash TEXT,
+    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+    invite_token_hash TEXT,
+    invited_at INTEGER,
+    activated_at INTEGER,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -30,4 +34,15 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_users_invite ON users(invite_token_hash);
 `)
+
+// Migrate databases created before roles/invites existed.
+const columns = db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>
+const names = new Set(columns.map((c) => c.name))
+if (!names.has('role')) {
+  db.exec(`ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user'))`)
+}
+if (!names.has('invite_token_hash')) db.exec('ALTER TABLE users ADD COLUMN invite_token_hash TEXT')
+if (!names.has('invited_at')) db.exec('ALTER TABLE users ADD COLUMN invited_at INTEGER')
+if (!names.has('activated_at')) db.exec('ALTER TABLE users ADD COLUMN activated_at INTEGER')
