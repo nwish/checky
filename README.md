@@ -65,6 +65,8 @@ npm start        # serves UI and API on http://127.0.0.1:3001
 | `SMTP_FROM` | `Checky <checky@localhost>` | From address for emails |
 | `APP_URL`   | request origin | Base URL used in invitation links when the email is sent |
 
+The server reads a `.env` file from the repo root when present — create it from `.env.example`. Values in a real environment always take precedence over the file.
+
 ## Deployment (Docker)
 
 ```bash
