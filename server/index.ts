@@ -54,7 +54,7 @@ function startSession(res: Response, userId: number) {
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: isProd,
+    secure: process.env.HTTPS === '1',
     path: '/'
   })
 }

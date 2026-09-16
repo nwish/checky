@@ -55,7 +55,20 @@ npm start        # serves UI and API on http://127.0.0.1:3001
 | ---------- | ----------- | -------------------------------------- |
 | `PORT`     | `3001`      | API port                               |
 | `HOST`     | `127.0.0.1` | Bind address; set `0.0.0.0` to expose  |
-| `NODE_ENV` | —           | `production` enables `Secure` cookies  |
+| `NODE_ENV` | —         | `production` serves the built UI      |
+| `HTTPS`    | —         | `1` adds the `Secure` flag to the session cookie — set only when served over TLS (reverse proxy, etc.) |
+
+## Deployment (Docker)
+
+```bash
+docker compose up -d --build
+```
+
+- App: http://localhost:3001 (UI + API in one container)
+- SQLite persists in the `checky-data` named volume (`/app/data`)
+- Healthcheck: `GET /api/health`
+- Behind a TLS reverse proxy: uncomment the `HTTPS=1` env in `docker-compose.yml`
+- First account: same as above — register via the UI
 
 ## API
 

@@ -1,0 +1,14 @@
+services:
+  checky:
+    build: .
+    ports:
+      - "3001:3001"
+    volumes:
+      - checky-data:/app/data
+    restart: unless-stopped
+    # Behind TLS (reverse proxy): set HTTPS=1 so session cookies get the Secure flag
+    # environment:
+    #   - HTTPS=1
+
+volumes:
+  checky-data:
