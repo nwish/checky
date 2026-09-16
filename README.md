@@ -38,7 +38,7 @@ Both servers run under one command (`concurrently`); `api` runs in watch mode.
 | `npm run dev`         | API (watch mode) + Vite dev server together         |
 | `npm run dev:api`     | API only (http://127.0.0.1:3001)                    |
 | `npm run dev:web`     | Vite dev server only (http://127.0.0.1:5173)        |
-| `npm run build`       | Compile the API and build the frontend to `dist/`   |
+| `npm run build`       | Build the frontend to `dist/` (API runs TS directly) |
 | `npm start`           | Production: Express serves the built UI + API       |
 | `npm run typecheck`   | Type-check the frontend without emitting            |
 
