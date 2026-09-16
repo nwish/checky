@@ -43,8 +43,7 @@ export const api = {
   login: (email: string, password: string) => request<Me>('/api/auth/login', json('POST', '/api/auth/login', { email, password })),
   register: (email: string, password: string) => request<Me>('/api/auth/register', json('POST', '/api/auth/register', { email, password })),
   logout: () => request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
-  activate: (token: string, password: string) =>
-    request<Me>('/api/auth/activate', json('POST', '/api/auth/activate', { token, password })),
+  activate: (token: string, password: string) => request<Me>('/api/auth/activate', json('POST', '/api/auth/activate', { token, password })),
   invite: (email: string) => request<{ email: string; resent: boolean; mail: string }>('/api/admin/invites', json('POST', '/api/admin/invites', { email })),
   users: () => request<{ users: AdminUser[] }>('/api/admin/users')
 }
