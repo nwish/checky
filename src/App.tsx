@@ -76,9 +76,12 @@ function Shell({ user, onSignOut }: { user: Me; onSignOut: () => void }) {
   return (
     <div className="shell">
       <header>
-        <div>
-          <h1>Checky</h1>
-          <p className="muted">Foundation ready — the checklist app lands next</p>
+        <div className="brand-row">
+          <img src="/checky.svg" width="30" height="30" alt="" />
+          <div>
+            <h1>Checky</h1>
+            <p className="muted">Foundation ready — the checklist app lands next</p>
+          </div>
         </div>
         <div className="who">
           <span>

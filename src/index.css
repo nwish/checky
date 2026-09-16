@@ -242,3 +242,9 @@ button.link:hover {
   background: none;
   text-decoration: underline;
 }
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
