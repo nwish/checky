@@ -2,12 +2,12 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { rateLimit } from 'express-rate-limit'
 import { hashPassword, hashToken, newToken, verifyPassword } from './auth.js'
 import { checklistsRouter } from './checklists.js'
 import { db } from './db.js'
 import { inviteMail, sendMail, smtpConfigured } from './mail.js'
 import { COOKIE_NAME, parseCookies, requireAdmin, requireAuth, type AuthedRequest, type Role } from './middleware.js'
-import { allow } from './ratelimit.js'
 
 const isProd = process.env.NODE_ENV === 'production'
 const HOST = process.env.HOST ?? '127.0.0.1'
@@ -67,12 +67,59 @@ function asString(value: unknown): string {
   return typeof value === 'string' ? value : ''
 }
 
-function appBaseUrl(req: Request): string {
-  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, '')
-  const origin = asString(req.headers.origin)
-  if (origin) return origin
-  return `http://localhost:${PORT}`
+function appBaseUrl(): URL {
+  const base = new URL(process.env.APP_URL ?? `http://localhost:${PORT}`)
+  if (base.protocol !== 'http:' && base.protocol !== 'https:') {
+    throw new Error('APP_URL must use http or https')
+  }
+  return base
 }
+
+function inviteLink(token: string): string {
+  const url = new URL('/activate', appBaseUrl())
+  url.searchParams.set('token', token)
+  return url.href
+}
+
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  limit: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'too many attempts, slow down' }
+})
+
+const loginLimiter = rateLimit({
+  windowMs: 5 * 60_000,
+  limit: 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'too many attempts, slow down' }
+})
+
+const activationLimiter = rateLimit({
+  windowMs: 5 * 60_000,
+  limit: 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'too many attempts, slow down' }
+})
+
+const inviteLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  limit: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'too many attempts, slow down' }
+})
+
+const adminUsersLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  limit: 120,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'too many requests, slow down' }
+})
 
 const app = express()
 app.disable('x-powered-by')
@@ -85,7 +132,7 @@ app.get('/api/health', (_req, res) => {
 
 // The first account ever created becomes the admin. After that, new accounts
 // only come from admin invitations.
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', registerLimiter, (req, res) => {
   const body = readBody(req)
   const email = asString(body.email).trim()
   const password = asString(body.password)
@@ -102,10 +149,7 @@ app.post('/api/auth/register', (req, res) => {
     res.status(403).json({ error: 'registration is closed — ask an administrator to invite you' })
     return
   }
-  if (!allow(`register:${req.ip}`, 10, 15 * 60_000)) {
-    res.status(429).json({ error: 'too many attempts, slow down' })
-    return
-  }
+
   let info
   try {
     info = statements.insertUser.run(email, hashPassword(password), 'admin', null, null, Date.now())
@@ -117,7 +161,7 @@ app.post('/api/auth/register', (req, res) => {
   res.status(201).json({ email, role: 'admin' })
 })
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', loginLimiter, (req, res) => {
   const body = readBody(req)
   const email = asString(body.email).trim()
   const password = asString(body.password)
@@ -125,10 +169,7 @@ app.post('/api/auth/login', (req, res) => {
     res.status(400).json({ error: 'invalid email or password' })
     return
   }
-  if (!allow(`login:${req.ip}:${email.toLowerCase()}`, 5, 5 * 60_000)) {
-    res.status(429).json({ error: 'too many attempts, slow down' })
-    return
-  }
+
   const user = statements.findUser.get(email) as UserRow | undefined
   const ok = verifyPassword(password, user?.pass_hash ?? timingEqualizer())
   if (!user || user.pass_hash === null || !ok) {
@@ -155,7 +196,7 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
 })
 
 // Invited user sets their password via the single-use link.
-app.post('/api/auth/activate', (req, res) => {
+app.post('/api/auth/activate', activationLimiter, (req, res) => {
   const body = readBody(req)
   const token = asString(body.token).trim()
   const password = asString(body.password)
@@ -167,10 +208,7 @@ app.post('/api/auth/activate', (req, res) => {
     res.status(400).json({ error: 'invitation link is invalid or has already been used' })
     return
   }
-  if (!allow(`activate:${hashToken(token)}`, 5, 5 * 60_000)) {
-    res.status(429).json({ error: 'too many attempts, slow down' })
-    return
-  }
+
   const pending = statements.findUserByInviteToken.get(hashToken(token)) as InviteRow | undefined
   if (!pending || pending.pass_hash !== null) {
     res.status(400).json({ error: 'invitation link is invalid or has already been used' })
@@ -181,17 +219,14 @@ app.post('/api/auth/activate', (req, res) => {
   res.json({ email: pending.email })
 })
 
-app.post('/api/admin/invites', requireAdmin, async (req, res) => {
+app.post('/api/admin/invites', inviteLimiter, requireAdmin, async (req, res) => {
   const body = readBody(req)
   const email = asString(body.email).trim()
   if (email.length > 254 || !EMAIL_RE.test(email)) {
     res.status(400).json({ error: 'enter a valid email' })
     return
   }
-  if (!allow(`invite:${req.ip}`, 10, 15 * 60_000)) {
-    res.status(429).json({ error: 'too many attempts, slow down' })
-    return
-  }
+
   const existing = statements.findUser.get(email) as UserRow | undefined
   if (existing && existing.pass_hash !== null) {
     res.status(409).json({ error: 'a user with that email already exists' })
@@ -208,19 +243,19 @@ app.post('/api/admin/invites', requireAdmin, async (req, res) => {
   } else {
     statements.insertUser.run(email, null, 'user', hashToken(token), now, null)
   }
-  const link = `${appBaseUrl(req)}/activate?token=${token}`
+  const link = inviteLink(token)
   const mail = inviteMail(link)
   try {
     await sendMail(email, mail.subject, mail.text, mail.html)
   } catch (err) {
-    console.error(`[mail] failed to send invite to ${email}:`, err)
+    console.error('[mail] failed to send invite to %s:', email, err)
     res.status(502).json({ error: 'user created, but the invitation email failed to send — invite the email again to resend' })
     return
   }
   res.status(202).json({ email, resent, mail: smtpConfigured() ? 'sent' : 'logged-to-server (SMTP_HOST not set)' })
 })
 
-app.get('/api/admin/users', requireAdmin, (_req, res) => {
+app.get('/api/admin/users', adminUsersLimiter, requireAdmin, (_req, res) => {
   const users = statements.listUsers.all() as Array<{
     email: string
     role: Role
@@ -259,6 +294,6 @@ app.use((err: Error & { status?: number }, _req: Request, res: Response, _next: 
 })
 
 app.listen(PORT, HOST, () => {
-  console.log(`checky api listening on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`)
+  console.log('checky api listening on http://%s:%d', HOST === '0.0.0.0' ? 'localhost' : HOST, PORT)
   if (!smtpConfigured()) console.warn('[mail] SMTP_HOST not set — invitation emails will be logged, not sent')
 })
