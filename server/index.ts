@@ -121,6 +121,14 @@ const adminUsersLimiter = rateLimit({
   message: { error: 'too many requests, slow down' }
 })
 
+const spaFallbackLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  limit: 60,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'too many requests, slow down' }
+})
+
 const app = express()
 app.disable('x-powered-by')
 app.use(express.json({ limit: '16kb' }))
@@ -280,7 +288,7 @@ if (isProd) {
   const distDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist')
   if (existsSync(distDir)) {
     app.use(express.static(distDir))
-    app.use((req, res, next) => {
+    app.use(spaFallbackLimiter, (req, res, next) => {
       if (req.method !== 'GET' || req.path.startsWith('/api/')) next()
       else res.sendFile(join(distDir, 'index.html'))
     })
