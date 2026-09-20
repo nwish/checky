@@ -71,7 +71,7 @@ export default function ChecklistsPage() {
 
   return (
     <>
-      <section className="card">
+      <section className="card checklist-new-card">
         <h2>New checklist</h2>
         <p className="muted">Give it a name, then add the items you check every time.</p>
         <form onSubmit={createChecklist} className="form">
@@ -85,11 +85,11 @@ export default function ChecklistsPage() {
       </section>
 
       {checklists === null ? (
-        <p className="muted">Loading…</p>
+        <p className="muted checklist-section-gap">Loading…</p>
       ) : checklists.length === 0 ? (
-        <p className="muted">No checklists yet — create your first one above.</p>
+        <p className="muted checklist-section-gap">No checklists yet — create your first one above.</p>
       ) : (
-        <div className="checklist-list">
+        <div className="checklist-list checklist-section-gap">
           {checklists.map((summary) => (
             <ChecklistCard
               key={summary.id}

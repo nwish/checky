@@ -612,6 +612,10 @@ button.link:active {
     box-shadow: 0 -2px 14px -6px rgba(0, 0, 0, 0.55);
     padding: 16px;
   }
+
+  .checklist-new-card {
+    max-width: none;
+  }
 }
 
 /* ---- Dashboard: the instrument panel ---- */
@@ -808,6 +812,10 @@ button.link:active {
 }
 
 /* ---- Checklists: manage (customize) ---- */
+
+.checklist-section-gap {
+  margin-top: 20px;
+}
 
 .checklist-list {
   display: flex;
