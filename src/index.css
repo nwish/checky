@@ -1106,3 +1106,87 @@ button.link:active {
 .run-item.checked .run-item-text {
   color: var(--legend);
 }
+
+/* ---- Checklist icons ---- */
+
+.icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.icon-swatch {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--key);
+  border: 1px solid var(--key-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-key-rest);
+  color: var(--legend);
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, background 0.08s ease-out, color 0.08s ease-out;
+}
+
+.icon-swatch svg {
+  width: 17px;
+  height: 17px;
+}
+
+.icon-swatch:hover {
+  background: var(--key-hover);
+  color: var(--ink);
+  box-shadow: var(--shadow-key-hover);
+  transform: translateY(-1px);
+}
+
+.icon-swatch:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-key-pressed);
+}
+
+.icon-swatch.active {
+  color: var(--action);
+  border-color: color-mix(in srgb, var(--action) 55%, var(--key-border));
+  outline: 2px solid color-mix(in srgb, var(--action) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.checklist-card-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--legend);
+}
+
+.checklist-card-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.run-header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.run-header-icon {
+  width: 34px;
+  height: 34px;
+  background: var(--key);
+  border: 1px solid var(--key-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-key-rest);
+}
+
+.run-header-icon svg {
+  width: 20px;
+  height: 20px;
+}

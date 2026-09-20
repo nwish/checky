@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, type Checklist, type ChecklistSummary } from './api'
+import { checklistIcon } from './icons'
 
 const LAST_CHECKLIST_KEY = 'checky-last-checklist'
 
@@ -100,12 +101,16 @@ export default function DashboardPage({ navigate }: { navigate: (to: string) => 
       <div className="checklist-picker">
         <p className="muted">Which list are you running?</p>
         <div className="checklist-list">
-          {summaries.map((s) => (
-            <button key={s.id} type="button" className="checklist-pick-card" onClick={() => setActiveId(s.id)}>
-              <span className="checklist-card-title">{s.title}</span>
-              <span className="checklist-card-meta">{s.checkedCount}/{s.itemCount}</span>
-            </button>
-          ))}
+          {summaries.map((s) => {
+            const Icon = checklistIcon(s.icon)
+            return (
+              <button key={s.id} type="button" className="checklist-pick-card" onClick={() => setActiveId(s.id)}>
+                <span className="checklist-card-icon"><Icon /></span>
+                <span className="checklist-card-title">{s.title}</span>
+                <span className="checklist-card-meta">{s.checkedCount}/{s.itemCount}</span>
+              </button>
+            )
+          })}
         </div>
         <button type="button" className="ghost" onClick={() => navigate('/checklists')}>
           Manage checklists
@@ -116,13 +121,17 @@ export default function DashboardPage({ navigate }: { navigate: (to: string) => 
 
   const total = checklist.items.length
   const done = checklist.items.filter((i) => i.checked).length
+  const TitleIcon = checklistIcon(checklist.icon)
 
   return (
     <div className="run-checklist">
       <div className="run-header">
-        <div>
-          <h2>{checklist.title}</h2>
-          <p className="muted">{done}/{total} checked</p>
+        <div className="run-header-title">
+          <span className="checklist-card-icon run-header-icon"><TitleIcon /></span>
+          <div>
+            <h2>{checklist.title}</h2>
+            <p className="muted">{done}/{total} checked</p>
+          </div>
         </div>
         <div className="run-header-actions">
           <button type="button" className="ghost" onClick={resetChecklist} disabled={done === 0}>

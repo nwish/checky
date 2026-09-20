@@ -40,6 +40,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
+    icon TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -66,3 +67,9 @@ if (!names.has('role')) {
 if (!names.has('invite_token_hash')) db.exec('ALTER TABLE users ADD COLUMN invite_token_hash TEXT')
 if (!names.has('invited_at')) db.exec('ALTER TABLE users ADD COLUMN invited_at INTEGER')
 if (!names.has('activated_at')) db.exec('ALTER TABLE users ADD COLUMN activated_at INTEGER')
+
+// Migrate checklists created before icons existed.
+const checklistColumns = db.prepare('PRAGMA table_info(checklists)').all() as Array<{ name: string }>
+if (!checklistColumns.some((c) => c.name === 'icon')) {
+  db.exec('ALTER TABLE checklists ADD COLUMN icon TEXT')
+}

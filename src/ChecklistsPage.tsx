@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, type Checklist, type ChecklistSummary } from './api'
+import IconPicker from './IconPicker'
+import { checklistIcon, DEFAULT_CHECKLIST_ICON } from './icons'
 
 const icons = {
   chevron: (
@@ -34,6 +36,7 @@ export default function ChecklistsPage() {
   const [checklists, setChecklists] = useState<ChecklistSummary[] | null>(null)
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [newTitle, setNewTitle] = useState('')
+  const [newIcon, setNewIcon] = useState(DEFAULT_CHECKLIST_ICON)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -53,8 +56,9 @@ export default function ChecklistsPage() {
     setCreating(true)
     setError(null)
     try {
-      const created = await api.createChecklist(title)
+      const created = await api.createChecklist(title, newIcon)
       setNewTitle('')
+      setNewIcon(DEFAULT_CHECKLIST_ICON)
       await refresh()
       setExpandedId(created.id)
     } catch (err) {
@@ -78,6 +82,10 @@ export default function ChecklistsPage() {
           <label>
             Title
             <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Kayaking trip" required maxLength={200} />
+          </label>
+          <label>
+            Icon
+            <IconPicker value={newIcon} onChange={setNewIcon} />
           </label>
           {error && <p className="error">{error}</p>}
           <button type="submit" disabled={creating}>{creating ? 'Creating…' : 'Create checklist'}</button>
@@ -139,7 +147,12 @@ function ChecklistCard({
       setTitleDraft(summary.title)
       return
     }
-    await api.renameChecklist(summary.id, title)
+    await api.updateChecklist(summary.id, { title })
+    onChanged()
+  }
+
+  async function saveIcon(icon: string) {
+    await api.updateChecklist(summary.id, { icon })
     onChanged()
   }
 
@@ -180,9 +193,12 @@ function ChecklistCard({
     onDeleted(summary.id)
   }
 
+  const HeaderIcon = checklistIcon(summary.icon)
+
   return (
     <div className="checklist-card">
       <button type="button" className={`checklist-card-header${expanded ? ' open' : ''}`} onClick={onToggle}>
+        <span className="checklist-card-icon"><HeaderIcon /></span>
         <span className="checklist-card-title">{summary.title}</span>
         <span className="checklist-card-meta">{summary.checkedCount}/{summary.itemCount}</span>
         <span className="checklist-card-chevron">{icons.chevron}</span>
@@ -193,6 +209,10 @@ function ChecklistCard({
           <label>
             Title
             <input value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)} onBlur={saveTitle} maxLength={200} />
+          </label>
+          <label>
+            Icon
+            <IconPicker value={summary.icon} onChange={saveIcon} />
           </label>
 
           {!checklist ? (

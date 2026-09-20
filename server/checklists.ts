@@ -2,13 +2,27 @@ import { Router, type Response } from 'express'
 import { db } from './db.js'
 import { requireAuth, type AuthedRequest } from './middleware.js'
 
-type ChecklistRow = { id: number; user_id: number; title: string; created_at: string; updated_at: string }
+type ChecklistRow = { id: number; user_id: number; title: string; icon: string | null; created_at: string; updated_at: string }
 type ItemRow = { id: number; checklist_id: number; text: string; checked: number; position: number }
-type ListRow = { id: number; title: string; updated_at: string; item_count: number; checked_count: number }
+type ListRow = { id: number; title: string; icon: string | null; updated_at: string; item_count: number; checked_count: number }
+
+// Kept in sync with src/icons.ts's CHECKLIST_ICONS list. A fixed, curated set
+// rather than free text: keeps the picker sane and rejects anything unknown.
+const CHECKLIST_ICONS = [
+  'Waves', 'Sailboat', 'Anchor', 'Fish', 'Droplet',
+  'Tent', 'Mountain', 'Trees', 'Palmtree', 'Compass', 'Backpack', 'Snowflake', 'Sun', 'Flame',
+  'Dumbbell', 'Bike',
+  'Car', 'Plane', 'Luggage',
+  'Home', 'Wrench', 'Hammer', 'Tractor', 'PaintRoller', 'Scissors', 'Package', 'ShoppingCart',
+  'UtensilsCrossed', 'Coffee', 'Wine',
+  'Briefcase', 'Book', 'Music', 'Camera', 'Baby', 'Dog', 'Heart', 'Stethoscope', 'Sparkles', 'Shirt',
+  'ListChecks'
+]
+const CHECKLIST_ICON_SET = new Set(CHECKLIST_ICONS)
 
 const statements = {
   listChecklists: db.prepare(
-    `SELECT c.id, c.title, c.updated_at,
+    `SELECT c.id, c.title, c.icon, c.updated_at,
             COUNT(ci.id) AS item_count,
             COALESCE(SUM(ci.checked), 0) AS checked_count
        FROM checklists c
@@ -17,9 +31,10 @@ const statements = {
       GROUP BY c.id
       ORDER BY c.updated_at DESC, c.id DESC`
   ),
-  findChecklist: db.prepare('SELECT id, user_id, title, created_at, updated_at FROM checklists WHERE id = ?'),
-  insertChecklist: db.prepare('INSERT INTO checklists (user_id, title) VALUES (?, ?)'),
+  findChecklist: db.prepare('SELECT id, user_id, title, icon, created_at, updated_at FROM checklists WHERE id = ?'),
+  insertChecklist: db.prepare('INSERT INTO checklists (user_id, title, icon) VALUES (?, ?, ?)'),
   renameChecklist: db.prepare(`UPDATE checklists SET title = ?, updated_at = datetime('now') WHERE id = ?`),
+  updateChecklistIcon: db.prepare(`UPDATE checklists SET icon = ?, updated_at = datetime('now') WHERE id = ?`),
   touchChecklist: db.prepare(`UPDATE checklists SET updated_at = datetime('now') WHERE id = ?`),
   deleteChecklist: db.prepare('DELETE FROM checklists WHERE id = ?'),
 
@@ -68,6 +83,7 @@ checklistsRouter.get('/', (req, res) => {
     checklists: rows.map((r) => ({
       id: r.id,
       title: r.title,
+      icon: r.icon,
       updatedAt: r.updated_at,
       itemCount: r.item_count,
       checkedCount: r.checked_count
@@ -76,39 +92,60 @@ checklistsRouter.get('/', (req, res) => {
 })
 
 checklistsRouter.post('/', (req, res) => {
-  const title = asString((req.body as Record<string, unknown>)?.title).trim() || 'Untitled checklist'
+  const body = req.body as Record<string, unknown>
+  const title = asString(body?.title).trim() || 'Untitled checklist'
   if (title.length > TITLE_MAX) {
     res.status(400).json({ error: `title must be ${TITLE_MAX} characters or fewer` })
     return
   }
-  const info = statements.insertChecklist.run((req as unknown as AuthedRequest).user.id, title)
+  const iconInput = body?.icon
+  if (iconInput !== undefined && iconInput !== null && !CHECKLIST_ICON_SET.has(asString(iconInput))) {
+    res.status(400).json({ error: 'unknown icon' })
+    return
+  }
+  const icon = typeof iconInput === 'string' ? iconInput : null
+  const info = statements.insertChecklist.run((req as unknown as AuthedRequest).user.id, title, icon)
   const id = Number(info.lastInsertRowid)
   const row = statements.findChecklist.get(id) as ChecklistRow
-  res.status(201).json({ id: row.id, title: row.title, updatedAt: row.updated_at, items: [] })
+  res.status(201).json({ id: row.id, title: row.title, icon: row.icon, updatedAt: row.updated_at, items: [] })
 })
 
 checklistsRouter.get('/:id', (req, res) => {
   const checklist = loadOwned(req as unknown as AuthedRequest, res, Number(req.params.id))
   if (!checklist) return
   const items = (statements.listItems.all(checklist.id) as ItemRow[]).map(serializeItem)
-  res.json({ id: checklist.id, title: checklist.title, updatedAt: checklist.updated_at, items })
+  res.json({ id: checklist.id, title: checklist.title, icon: checklist.icon, updatedAt: checklist.updated_at, items })
 })
 
 checklistsRouter.patch('/:id', (req, res) => {
   const checklist = loadOwned(req as unknown as AuthedRequest, res, Number(req.params.id))
   if (!checklist) return
-  const title = asString((req.body as Record<string, unknown>)?.title).trim()
-  if (!title) {
-    res.status(400).json({ error: 'title cannot be empty' })
-    return
+  const body = req.body as Record<string, unknown>
+
+  if (typeof body?.title === 'string') {
+    const title = body.title.trim()
+    if (!title) {
+      res.status(400).json({ error: 'title cannot be empty' })
+      return
+    }
+    if (title.length > TITLE_MAX) {
+      res.status(400).json({ error: `title must be ${TITLE_MAX} characters or fewer` })
+      return
+    }
+    statements.renameChecklist.run(title, checklist.id)
   }
-  if (title.length > TITLE_MAX) {
-    res.status(400).json({ error: `title must be ${TITLE_MAX} characters or fewer` })
-    return
+
+  if ('icon' in body) {
+    const iconInput = body.icon
+    if (iconInput !== null && !CHECKLIST_ICON_SET.has(asString(iconInput))) {
+      res.status(400).json({ error: 'unknown icon' })
+      return
+    }
+    statements.updateChecklistIcon.run(typeof iconInput === 'string' ? iconInput : null, checklist.id)
   }
-  statements.renameChecklist.run(title, checklist.id)
+
   const row = statements.findChecklist.get(checklist.id) as ChecklistRow
-  res.json({ id: row.id, title: row.title, updatedAt: row.updated_at })
+  res.json({ id: row.id, title: row.title, icon: row.icon, updatedAt: row.updated_at })
 })
 
 checklistsRouter.delete('/:id', (req, res) => {
