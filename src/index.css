@@ -599,14 +599,17 @@ button.link:active {
   }
 
   .app-main {
-    padding: 24px 20px 40px;
+    padding: 24px 20px 150px;
   }
 
   .app-nav-foot {
-    position: static;
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
     background: var(--panel);
     border-right: none;
     border-top: 1px solid var(--key-border);
+    box-shadow: 0 -2px 14px -6px rgba(0, 0, 0, 0.55);
     padding: 16px;
   }
 }
