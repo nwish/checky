@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import type { Me } from './api'
+import { applyTheme, getStoredTheme, THEMES, type ThemeId } from './theme'
 
 const icons = {
   dashboard: (
@@ -78,6 +79,8 @@ export default function AppShell({
 
         <div className="nav-spacer" />
 
+        <ThemePicker />
+
         <div className="nav-user">
           <div className="nav-avatar">{initials}</div>
           <div className="nav-user-info">
@@ -97,6 +100,33 @@ export default function AppShell({
         </div>
         {children}
       </main>
+    </div>
+  )
+}
+
+function ThemePicker() {
+  const [active, setActive] = useState<ThemeId>(() => getStoredTheme())
+
+  function select(id: ThemeId) {
+    applyTheme(id)
+    setActive(id)
+  }
+
+  return (
+    <div className="theme-picker" role="radiogroup" aria-label="Accent color">
+      {THEMES.map((theme) => (
+        <button
+          key={theme.id}
+          type="button"
+          role="radio"
+          aria-checked={active === theme.id}
+          aria-label={theme.label}
+          title={theme.label}
+          className={`theme-swatch${active === theme.id ? ' active' : ''}`}
+          style={{ '--swatch': theme.action } as CSSProperties}
+          onClick={() => select(theme.id)}
+        />
+      ))}
     </div>
   )
 }

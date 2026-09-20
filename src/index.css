@@ -385,6 +385,41 @@ button.link:active {
   flex: 1;
 }
 
+.theme-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 2px;
+}
+
+.theme-swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: var(--swatch);
+  border: 1px solid var(--key-border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-key-rest);
+  cursor: pointer;
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, outline-color 0.08s ease-out;
+}
+
+.theme-swatch:hover {
+  background: var(--swatch);
+  box-shadow: var(--shadow-key-hover);
+  transform: translateY(-1px);
+}
+
+.theme-swatch:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-key-pressed);
+}
+
+.theme-swatch.active {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
 .nav-user {
   display: flex;
   align-items: center;
