@@ -8,8 +8,6 @@ Local and self-hosted: everything lives on your machine in a SQLite file. No clo
 
 Current state: foundation — secure user/pass auth is working; the checklist features are next.
 
-This is really just a low-risk test of Qwen 3.8 to see how well it builds a complete app!
-
 ## Stack
 
 | Layer     | Tech                                                        |
