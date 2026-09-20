@@ -2,17 +2,26 @@ import { useEffect, useState } from 'react'
 import { api, type Me } from './api'
 import LoginPage from './LoginPage'
 import AdminPage from './AdminPage'
+import DashboardPage from './DashboardPage'
+import AppShell from './AppShell'
+import { useRoute } from './useRoute'
 
 const tokenFromUrl = () => new URLSearchParams(window.location.search).get('token') ?? ''
 
 export default function App() {
   const [state, setState] = useState<{ user: Me | null; loading: boolean }>({ user: null, loading: true })
+  const { path, navigate } = useRoute()
 
   const load = () => {
     api
       .me()
       .then((user) => setState({ user, loading: false }))
       .catch(() => setState({ user: null, loading: false }))
+  }
+
+  const signOut = async () => {
+    await api.logout().catch(() => {})
+    setState({ user: null, loading: false })
   }
 
   useEffect(() => {
@@ -24,12 +33,22 @@ export default function App() {
 
   if (state.loading) return <main className="center"><div className="card"><p>Loading…</p></div></main>
 
-  const isAdminDirect = window.location.pathname === '/admin' && state.user?.role === 'admin'
-  if (isAdminDirect) return <AdminPage />
+  if (!state.user) return <LoginPage onAuthed={load} />
 
-  if (state.user) return <Shell user={state.user} onSignOut={load} />
+  const isAdminRoute = path === '/admin' && state.user.role === 'admin'
 
-  return <LoginPage onAuthed={load} />
+  return (
+    <AppShell
+      user={state.user}
+      path={isAdminRoute ? '/admin' : '/'}
+      navigate={navigate}
+      onSignOut={signOut}
+      title={isAdminRoute ? 'Admin' : 'Dashboard'}
+      subtitle={isAdminRoute ? 'Invite teammates and manage access.' : `Welcome back, ${state.user.email.split('@')[0]}.`}
+    >
+      {isAdminRoute ? <AdminPage /> : <DashboardPage />}
+    </AppShell>
+  )
 }
 
 function ActivationCard({ token }: { token: string }) {
@@ -45,6 +64,7 @@ function ActivationCard({ token }: { token: string }) {
     try {
       await api.activate(token, password)
       setDone(true)
+      window.history.replaceState(null, '', '/')
       window.location.reload()
     } catch (err) {
       setError((err as Error).message)
@@ -52,6 +72,8 @@ function ActivationCard({ token }: { token: string }) {
       setBusy(false)
     }
   }
+
+  if (done) return <main className="center"><div className="card"><h2>Account active</h2><p>You're all set — loading the app…</p></div></main>
 
   return (
     <main className="center">
@@ -67,39 +89,5 @@ function ActivationCard({ token }: { token: string }) {
         </form>
       </div>
     </main>
-  )
-}
-
-function Shell({ user, onSignOut }: { user: Me; onSignOut: () => void }) {
-  async function signOut() {
-    await api.logout().catch(() => {})
-    onSignOut()
-  }
-
-  return (
-    <div className="shell">
-      <header>
-        <div className="brand-row">
-          <img src="/checky.svg" width="30" height="30" alt="" />
-          <div>
-            <h1>Checky</h1>
-            <p className="muted">Foundation ready — the checklist app lands next</p>
-          </div>
-        </div>
-        <div className="who">
-          <span>
-            {user.email} <span className={user.role === 'admin' ? 'badge badge-admin' : 'badge'}>{user.role}</span>
-          </span>
-          <button className="ghost" onClick={signOut}>Sign out</button>
-        </div>
-      </header>
-      {user.role === 'admin' ? (
-        <p className="muted">
-          Admin tools live at <a href="/admin">/admin</a>.
-        </p>
-      ) : (
-        <p className="muted">Signed in. Your checklist workspace lands here next.</p>
-      )}
-    </div>
   )
 }
