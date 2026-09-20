@@ -78,17 +78,19 @@ export default function ChecklistsPage() {
       <section className="card checklist-new-card">
         <h2>New checklist</h2>
         <p className="muted">Give it a name, then add the items you check every time.</p>
-        <form onSubmit={createChecklist} className="form">
-          <label>
-            Title
-            <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Kayaking trip" required maxLength={200} />
-          </label>
-          <label>
-            Icon
-            <IconPicker value={newIcon} onChange={setNewIcon} />
-          </label>
+        <form onSubmit={createChecklist} className="checklist-new-form">
+          <div className="checklist-new-fields">
+            <label className="checklist-new-title">
+              Title
+              <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Kayaking trip" required maxLength={200} />
+            </label>
+            <label className="checklist-new-icon">
+              Icon
+              <IconPicker value={newIcon} onChange={setNewIcon} />
+            </label>
+            <button type="submit" disabled={creating} className="checklist-new-submit">{creating ? 'Creating…' : 'Create checklist'}</button>
+          </div>
           {error && <p className="error">{error}</p>}
-          <button type="submit" disabled={creating}>{creating ? 'Creating…' : 'Create checklist'}</button>
         </form>
       </section>
 

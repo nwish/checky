@@ -612,12 +612,7 @@ button.link:active {
     box-shadow: 0 -2px 14px -6px rgba(0, 0, 0, 0.55);
     padding: 16px;
   }
-
-  .checklist-new-card {
-    max-width: none;
-  }
 }
-
 /* ---- Dashboard: the instrument panel ---- */
 
 .empty-state {
@@ -812,6 +807,37 @@ button.link:active {
 }
 
 /* ---- Checklists: manage (customize) ---- */
+
+.checklist-new-card {
+  max-width: none;
+}
+
+.checklist-new-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 1rem;
+}
+
+.checklist-new-fields {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.checklist-new-title {
+  flex: 1 1 220px;
+  min-width: 200px;
+}
+
+.checklist-new-icon {
+  flex-shrink: 0;
+}
+
+.checklist-new-submit {
+  flex-shrink: 0;
+}
 
 .checklist-section-gap {
   margin-top: 20px;
@@ -1154,6 +1180,102 @@ button.link:active {
   border-color: color-mix(in srgb, var(--action) 55%, var(--key-border));
   outline: 2px solid color-mix(in srgb, var(--action) 45%, transparent);
   outline-offset: 1px;
+}
+
+.icon-picker-trigger {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--key);
+  border: 1px solid var(--key-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-key-rest);
+  color: var(--legend);
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, background 0.08s ease-out, color 0.08s ease-out;
+}
+
+.icon-picker-trigger svg {
+  width: 19px;
+  height: 19px;
+}
+
+.icon-picker-trigger:hover {
+  background: var(--key-hover);
+  color: var(--ink);
+  box-shadow: var(--shadow-key-hover);
+  transform: translateY(-1px);
+}
+
+.icon-picker-trigger:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-key-pressed);
+}
+
+.icon-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(10, 11, 14, 0.7);
+}
+
+.icon-modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--key-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
+  padding: 20px;
+}
+
+.icon-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.icon-modal-header h2 {
+  margin: 0;
+}
+
+.icon-modal-close {
+  flex-shrink: 0;
+  display: flex;
+  padding: 7px;
+  background: var(--key);
+  border: 1px solid var(--key-border);
+  box-shadow: var(--shadow-key-rest);
+  border-radius: var(--radius-sm);
+  color: var(--dim);
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, background 0.08s ease-out, color 0.08s ease-out;
+}
+
+.icon-modal-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-modal-close:hover {
+  background: var(--key-hover);
+  color: var(--ink);
+  box-shadow: var(--shadow-key-hover);
+  transform: translateY(-1px);
+}
+
+.icon-modal-close:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-key-pressed);
 }
 
 .checklist-card-icon {
