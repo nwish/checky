@@ -23,6 +23,19 @@ const icons = {
       <path d="m16 17 5-5-5-5" />
       <path d="M21 12H9" />
     </svg>
+  ),
+  menu: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="4" y1="7" x2="20" y2="7" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <line x1="4" y1="17" x2="20" y2="17" />
+    </svg>
+  ),
+  close: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="6" y1="6" x2="18" y2="18" />
+      <line x1="18" y1="6" x2="6" y2="18" />
+    </svg>
   )
 }
 
@@ -46,39 +59,65 @@ export default function AppShell({
   children: ReactNode
 }) {
   const initials = user.email.slice(0, 2).toUpperCase()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const navItems: NavItem[] = [
     { key: 'dashboard', label: 'Dashboard', path: '/', icon: icons.dashboard },
     ...(user.role === 'admin' ? [{ key: 'admin', label: 'Admin', path: '/admin', icon: icons.admin }] : [])
   ]
 
+  function go(to: string) {
+    navigate(to)
+    setMenuOpen(false)
+  }
+
   return (
     <div className="app-shell">
-      <nav className="app-nav">
-        <div className="nav-brand">
-          <img src="/checky.svg" alt="" />
-          <div className="brand-text">
-            <strong>Checky</strong>
-            <span>Checklist workspace</span>
+      <div className="app-nav-bg" aria-hidden="true" />
+      <div className="app-nav-top">
+        <div className="nav-top-row">
+          <div className="nav-brand">
+            <img src="/checky.svg" alt="" />
+            <div className="brand-text">
+              <strong>Checky</strong>
+              <span>Checklist workspace</span>
+            </div>
           </div>
+          <button
+            type="button"
+            className="nav-hamburger"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? icons.close : icons.menu}
+          </button>
         </div>
 
-        <div className="nav-links">
+        <div className={`nav-links${menuOpen ? ' open' : ''}`}>
           {navItems.map((item) => (
             <button
               key={item.key}
               type="button"
               className={`nav-link${path === item.path ? ' active' : ''}`}
-              onClick={() => navigate(item.path)}
+              onClick={() => go(item.path)}
             >
               {item.icon}
               {item.label}
             </button>
           ))}
         </div>
+      </div>
 
-        <div className="nav-spacer" />
+      <main className="app-main">
+        <div className="app-topbar">
+          <h1>{title}</h1>
+          {subtitle && <p>{subtitle}</p>}
+        </div>
+        {children}
+      </main>
 
+      <div className="app-nav-foot">
         <ThemePicker />
 
         <div className="nav-user">
@@ -91,15 +130,7 @@ export default function AppShell({
             {icons.signOut}
           </button>
         </div>
-      </nav>
-
-      <main className="app-main">
-        <div className="app-topbar">
-          <h1>{title}</h1>
-          {subtitle && <p>{subtitle}</p>}
-        </div>
-        {children}
-      </main>
+      </div>
     </div>
   )
 }
