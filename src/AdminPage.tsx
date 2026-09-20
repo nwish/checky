@@ -55,18 +55,18 @@ export default function AdminPage() {
 
   return (
     <>
-      <div className="stat-grid">
-        <div className="stat-card accent">
-          <span className="stat-value">{users?.length ?? '—'}</span>
-          <span className="stat-label">Total users</span>
+      <div className="status-readout">
+        <div className="segment">
+          <span className="value">{users?.length ?? '\u2014'}</span>
+          <span className="label">Total users</span>
         </div>
-        <div className="stat-card">
-          <span className="stat-value">{members.length}</span>
-          <span className="stat-label">Active</span>
+        <div className="segment">
+          <span className="value">{members.length}</span>
+          <span className="label">Active</span>
         </div>
-        <div className="stat-card">
-          <span className="stat-value">{pending.length}</span>
-          <span className="stat-label">Pending invites</span>
+        <div className="segment">
+          <span className="value">{pending.length}</span>
+          <span className="label">Pending invites</span>
         </div>
       </div>
 
