@@ -11,6 +11,10 @@ export type AdminUser = {
   created_at: string
 }
 
+export type ChecklistItem = { id: number; text: string; checked: boolean; position: number }
+export type ChecklistSummary = { id: number; title: string; updatedAt: string; itemCount: number; checkedCount: number }
+export type Checklist = { id: number; title: string; updatedAt: string; items: ChecklistItem[] }
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     credentials: 'same-origin',
@@ -45,5 +49,23 @@ export const api = {
   logout: () => request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
   activate: (token: string, password: string) => request<Me>('/api/auth/activate', json('POST', '/api/auth/activate', { token, password })),
   invite: (email: string) => request<{ email: string; resent: boolean; mail: string }>('/api/admin/invites', json('POST', '/api/admin/invites', { email })),
-  users: () => request<{ users: AdminUser[] }>('/api/admin/users')
+  users: () => request<{ users: AdminUser[] }>('/api/admin/users'),
+
+  checklists: () => request<{ checklists: ChecklistSummary[] }>('/api/checklists'),
+  createChecklist: (title: string) => request<Checklist>('/api/checklists', json('POST', '/api/checklists', { title })),
+  getChecklist: (id: number) => request<Checklist>(`/api/checklists/${id}`),
+  renameChecklist: (id: number, title: string) =>
+    request<{ id: number; title: string; updatedAt: string }>(`/api/checklists/${id}`, json('PATCH', `/api/checklists/${id}`, { title })),
+  deleteChecklist: (id: number) => request<{ ok: boolean }>(`/api/checklists/${id}`, { method: 'DELETE' }),
+  resetChecklist: (id: number) => request<{ items: ChecklistItem[] }>(`/api/checklists/${id}/reset`, { method: 'POST' }),
+  addItem: (id: number, text: string) =>
+    request<ChecklistItem>(`/api/checklists/${id}/items`, json('POST', `/api/checklists/${id}/items`, { text })),
+  updateItem: (id: number, itemId: number, patch: { text?: string; checked?: boolean }) =>
+    request<ChecklistItem>(`/api/checklists/${id}/items/${itemId}`, json('PATCH', `/api/checklists/${id}/items/${itemId}`, patch)),
+  deleteItem: (id: number, itemId: number) => request<{ ok: boolean }>(`/api/checklists/${id}/items/${itemId}`, { method: 'DELETE' }),
+  moveItem: (id: number, itemId: number, direction: 'up' | 'down') =>
+    request<{ items: ChecklistItem[] }>(
+      `/api/checklists/${id}/items/${itemId}/move`,
+      json('POST', `/api/checklists/${id}/items/${itemId}/move`, { direction })
+    )
 }

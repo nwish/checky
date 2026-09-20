@@ -11,6 +11,16 @@ const icons = {
       <rect x="3" y="16" width="7" height="5" rx="2" />
     </svg>
   ),
+  checklists: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m4 6 1.5 1.5L8 5" />
+      <line x1="11" y1="6" x2="20" y2="6" />
+      <path d="m4 12 1.5 1.5L8 11" />
+      <line x1="11" y1="12" x2="20" y2="12" />
+      <path d="m4 18 1.5 1.5L8 16" />
+      <line x1="11" y1="18" x2="20" y2="18" />
+    </svg>
+  ),
   admin: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 3 4 6v6c0 4.6 3.2 7.9 8 9 4.8-1.1 8-4.4 8-9V6l-8-3Z" />
@@ -63,6 +73,7 @@ export default function AppShell({
 
   const navItems: NavItem[] = [
     { key: 'dashboard', label: 'Dashboard', path: '/', icon: icons.dashboard },
+    { key: 'checklists', label: 'Checklists', path: '/checklists', icon: icons.checklists },
     ...(user.role === 'admin' ? [{ key: 'admin', label: 'Admin', path: '/admin', icon: icons.admin }] : [])
   ]
 

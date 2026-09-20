@@ -3,23 +3,21 @@ import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { hashPassword, hashToken, newToken, verifyPassword } from './auth.js'
+import { checklistsRouter } from './checklists.js'
 import { db } from './db.js'
 import { inviteMail, sendMail, smtpConfigured } from './mail.js'
+import { COOKIE_NAME, parseCookies, requireAdmin, requireAuth, type AuthedRequest, type Role } from './middleware.js'
 import { allow } from './ratelimit.js'
 
 const isProd = process.env.NODE_ENV === 'production'
 const HOST = process.env.HOST ?? '127.0.0.1'
 const PORT = Number(process.env.PORT ?? 3001)
 
-const COOKIE_NAME = 'checky_session'
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-type Role = 'admin' | 'user'
-type AuthedRequest = Request & { user: { id: number; email: string; role: Role } }
 type UserRow = { id: number; email: string; pass_hash: string | null }
 type InviteRow = { id: number; email: string; pass_hash: string | null }
-type SessionRow = { user_id: number; expires_at: number; email: string; role: string }
 
 const statements = {
   findUser: db.prepare('SELECT id, email, pass_hash FROM users WHERE email = ?'),
@@ -38,12 +36,6 @@ const statements = {
       ORDER BY (pass_hash IS NULL) DESC, COALESCE(invited_at, 0) DESC`
   ),
   insertSession: db.prepare('INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)'),
-  findSession: db.prepare(
-    `SELECT s.user_id, s.expires_at, u.email, u.role
-       FROM sessions s
-       JOIN users u ON u.id = s.user_id
-      WHERE s.token_hash = ?`
-  ),
   deleteSession: db.prepare('DELETE FROM sessions WHERE token_hash = ?')
 }
 db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now())
@@ -53,16 +45,6 @@ let dummyHash: string | null = null
 function timingEqualizer(): string {
   if (!dummyHash) dummyHash = hashPassword('timing-equalizer-not-a-real-password')
   return dummyHash
-}
-
-function parseCookies(req: Request): Record<string, string> {
-  const out: Record<string, string> = {}
-  for (const chunk of (req.headers.cookie ?? '').split(';')) {
-    const idx = chunk.indexOf('=')
-    if (idx === -1) continue
-    out[chunk.slice(0, idx).trim()] = decodeURIComponent(chunk.slice(idx + 1).trim())
-  }
-  return out
 }
 
 function startSession(res: Response, userId: number) {
@@ -95,6 +77,7 @@ function appBaseUrl(req: Request): string {
 const app = express()
 app.disable('x-powered-by')
 app.use(express.json({ limit: '16kb' }))
+app.use('/api/checklists', checklistsRouter)
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, smtp: smtpConfigured() })
@@ -166,33 +149,6 @@ app.post('/api/auth/logout', (req, res) => {
   res.clearCookie(COOKIE_NAME, { path: '/' })
   res.json({ ok: true })
 })
-
-function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const token = parseCookies(req)[COOKIE_NAME]
-  if (!token) {
-    res.status(401).json({ error: 'not signed in' })
-    return
-  }
-  const row = statements.findSession.get(hashToken(token)) as SessionRow | undefined
-  if (!row || row.expires_at < Date.now()) {
-    res.status(401).json({ error: 'not signed in' })
-    return
-  }
-  ;(req as AuthedRequest).user = { id: row.user_id, email: row.email, role: row.role as Role }
-  next()
-}
-
-function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  requireAuth(req, res, () => {
-    const user = (req as AuthedRequest).user
-    if (user.role !== 'admin') {
-      res.status(403).json({ error: 'admin only' })
-      return
-    }
-    next()
-  })
-}
-
 app.get('/api/auth/me', requireAuth, (req, res) => {
   const user = (req as AuthedRequest).user
   res.json({ email: user.email, role: user.role })

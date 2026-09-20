@@ -3,6 +3,7 @@ import { api, type Me } from './api'
 import LoginPage from './LoginPage'
 import AdminPage from './AdminPage'
 import DashboardPage from './DashboardPage'
+import ChecklistsPage from './ChecklistsPage'
 import AppShell from './AppShell'
 import { useRoute } from './useRoute'
 
@@ -36,17 +37,25 @@ export default function App() {
   if (!state.user) return <LoginPage onAuthed={load} />
 
   const isAdminRoute = path === '/admin' && state.user.role === 'admin'
+  const isChecklistsRoute = path === '/checklists'
+  const activePath = isAdminRoute ? '/admin' : isChecklistsRoute ? '/checklists' : '/'
+
+  const titles: Record<string, { title: string; subtitle: string }> = {
+    '/': { title: 'Dashboard', subtitle: `Welcome back, ${state.user.email.split('@')[0]}.` },
+    '/checklists': { title: 'Your checklists', subtitle: 'Build and customize the lists you run again and again.' },
+    '/admin': { title: 'Admin', subtitle: 'Invite teammates and manage access.' }
+  }
 
   return (
     <AppShell
       user={state.user}
-      path={isAdminRoute ? '/admin' : '/'}
+      path={activePath}
       navigate={navigate}
       onSignOut={signOut}
-      title={isAdminRoute ? 'Admin' : 'Dashboard'}
-      subtitle={isAdminRoute ? 'Invite teammates and manage access.' : `Welcome back, ${state.user.email.split('@')[0]}.`}
+      title={titles[activePath].title}
+      subtitle={titles[activePath].subtitle}
     >
-      {isAdminRoute ? <AdminPage /> : <DashboardPage />}
+      {isAdminRoute ? <AdminPage /> : isChecklistsRoute ? <ChecklistsPage /> : <DashboardPage navigate={navigate} />}
     </AppShell>
   )
 }
