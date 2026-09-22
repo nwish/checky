@@ -91,21 +91,6 @@ docker compose up -d --build
 - Invited users can sign in only after activating via the link.
 - The admin panel (visible to `role: admin` only) shows members, pending invites, and the invite form.
 
-## API
-
-All routes are JSON under `/api`:
-
-| Method | Route               | Auth   | Description                          |
-| ------ | ------------------- | ------ | ------------------------------------ |
-| GET    | `/api/health`       | —      | Liveness probe                       |
-| POST   | `/api/auth/register`| —      | Create the **first** account (becomes admin) `{ email, password }`; `403` once any account exists |
-| POST   | `/api/auth/login`   | —      | Sign in                              |
-| POST   | `/api/auth/logout`  | cookie | End session                          |
-| GET    | `/api/auth/me`      | cookie | Current user `{ email, role }` |
-| POST   | `/api/auth/activate`| link   | Set password with single-use invite `{ token, password }` |
-| POST   | `/api/admin/invites`| admin  | Invite `{ email }` (or resend) |
-| GET    | `/api/admin/users`  | admin  | List users + activation state |
-
 ## Auth & security notes
 
 - Passwords: PBKDF2-HMAC-SHA256, 600,000 iterations, per-user 16-byte random salt, stored as `pbkdf2-sha256$<iter>$<salt>$<hash>`.
