@@ -1,4 +1,5 @@
 node_modules/
+wrangler.generated.json
 dist/
 dist-server/
 data/

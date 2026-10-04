@@ -10,9 +10,10 @@
     "dev": "concurrently -k -n api,web -c blue,magenta \"npm:dev:api\" \"npm:dev:web\"",
     "dev:api": "cross-env NODE_ENV=development tsx watch --env-file-if-exists=.env server/index.ts",
     "dev:web": "vite",
-    "dev:worker": "npm run build && wrangler dev",
+    "prepare:worker": "node scripts/prepare-worker.mjs",
+    "dev:worker": "npm run prepare:worker && npm run build && wrangler dev --config wrangler.generated.json",
     "build": "vite build",
-    "deploy:worker": "npm run build && wrangler deploy",
+    "deploy:worker": "npm run prepare:worker && npm run build && wrangler d1 migrations apply checky-dev --remote --config wrangler.generated.json && wrangler deploy --config wrangler.generated.json",
     "start": "cross-env NODE_ENV=production tsx --env-file-if-exists=.env server/index.ts",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.server.json"
   },
