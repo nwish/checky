@@ -82,7 +82,20 @@ docker compose up -d --build
 - Healthcheck: `GET /api/health`
 - Behind a TLS reverse proxy: uncomment the `HTTPS=1` env in `docker-compose.yml`
 - First account: same as above — register via the UI (it becomes the admin)
-- Invitation emails need the `SMTP_*` env vars (see Configuration); without them the email is logged to the container's console
+  - Invitation emails need the `SMTP_*` env vars (see Configuration); without them the email is logged to the container's console
+
+## Deployment (Cloudflare Workers — development)
+
+Workers is an optional, separate deployment target. It keeps the normal Node/Express + SQLite app fully intact for local and Docker use, but uses a Cloudflare D1 database because Workers cannot run `better-sqlite3` or retain a local SQLite file.
+
+1. Install dependencies: `npm install`
+2. Create an isolated development database: `npx wrangler d1 create checky-dev`
+3. Copy the returned `database_id` into `wrangler.jsonc` (replace `REPLACE_WITH_YOUR_D1_DATABASE_ID`).
+4. Apply the schema: `npx wrangler d1 migrations apply checky-dev --remote`
+5. Start a local Workers preview: `npm run dev:worker`
+6. Deploy the development Worker: `npm run deploy:worker`
+
+The Worker serves the Vite build and `/api/*` from one origin, so its session cookie works normally. Its D1 data is intentionally separate from `data/checky.db`; it is a development sandbox, not a sync target. Invite emails are logged by the Worker until an HTTP mail provider is added, while standalone/Docker continues to use the existing SMTP configuration.
 
 ## Accounts & invitations
 
