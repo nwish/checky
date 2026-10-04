@@ -146,6 +146,18 @@ async function api(request: Request, env: Env): Promise<Response> {
     return json({ ok: true }, 200, { 'set-cookie': `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=0` })
   }
 
+  if (path === '/api/auth/activate' && method === 'POST') {
+    const rate = limited(request, 'activate', 5, 5 * 60_000); if (rate) return rate
+    const input = await body(request), token = asString(input.token).trim(), password = asString(input.password)
+    if (password.length < 8 || password.length > 512) return json({ error: 'password must be 8-512 characters' }, 400)
+    if (token.length < 10 || token.length > 100) return json({ error: 'invitation link is invalid or has already been used' }, 400)
+    const pending = await env.DB.prepare('SELECT id, email, pass_hash FROM users WHERE invite_token_hash = ?').bind(await sha256(token)).first<{ id: number; email: string; pass_hash: string | null }>()
+    if (!pending || pending.pass_hash !== null) return json({ error: 'invitation link is invalid or has already been used' }, 400)
+    await env.DB.prepare('UPDATE users SET pass_hash = ?, activated_at = ?, invite_token_hash = NULL WHERE id = ? AND pass_hash IS NULL')
+      .bind(await hashPassword(password), Date.now(), pending.id).run()
+    return json({ email: pending.email }, 200, { 'set-cookie': await startSession(env, pending.id) })
+  }
+
   const user = await authenticated(request, env)
   if (path === '/api/auth/me' && method === 'GET') return user ? json({ email: user.email, role: user.role }) : json({ error: 'not signed in' }, 401)
   if (!user) return json({ error: 'not signed in' }, 401)
