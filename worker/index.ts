@@ -13,7 +13,7 @@ const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const TITLE_MAX = 200
 const ITEM_TEXT_MAX = 500
-const ITERATIONS = 600_000
+const ITERATIONS = 100_000
 const ICONS = new Set([
   'Waves', 'Sailboat', 'Anchor', 'Fish', 'Droplet', 'Tent', 'Mountain', 'Trees', 'Palmtree', 'Compass', 'Backpack', 'Snowflake', 'Sun', 'Flame',
   'Dumbbell', 'Bike', 'Car', 'Plane', 'Luggage', 'Home', 'Wrench', 'Hammer', 'Tractor', 'PaintRoller', 'Scissors', 'Package', 'ShoppingCart',
