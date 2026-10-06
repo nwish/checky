@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
 
-const databaseName = 'checky-dev'
+const databaseName = 'checky'
 const configPath = 'wrangler.generated.json'
 
 function runWrangler(args, options = {}) {

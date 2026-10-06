@@ -92,7 +92,7 @@ Workers is an optional, separate deployment target. It keeps the normal Node/Exp
 2. Start a local Workers preview: `npm run dev:worker`
 3. Deploy the development Worker: `npm run deploy:worker`
 
-The first Worker command creates the `checky-dev` D1 database (when it does not already exist), discovers its UUID, and generates an ignored `wrangler.generated.json` with the binding. Deployment then applies migrations and publishes the Worker. No database ID needs to be copied into source control. The Worker serves the Vite build and `/api/*` from one origin, so its session cookie works normally. Its D1 data is intentionally separate from `data/checky.db`; it is a development sandbox, not a sync target. Invite emails are logged by the Worker until an HTTP mail provider is added, while standalone/Docker continues to use the existing SMTP configuration.
+The first Worker command creates the `checky` D1 database (when it does not already exist), discovers its UUID, and generates an ignored `wrangler.generated.json` with the binding. Deployment then applies migrations and publishes the Worker. No database ID needs to be copied into source control. The Worker serves the Vite build and `/api/*` from one origin, so its session cookie works normally. Its D1 data is intentionally separate from `data/checky.db`; it is not a sync target. This is a live beta deployment, so the D1 database holds real data. Invite emails are logged by the Worker until an HTTP mail provider is added, while standalone/Docker continues to use the existing SMTP configuration.
 
 ## Accounts & invitations
 
