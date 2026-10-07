@@ -91,6 +91,16 @@ docker compose up -d --build
 - Invited users can sign in only after activating via the link.
 - The admin panel (visible to `role: admin` only) shows members, pending invites, and the invite form.
 
+## Sharing
+
+- Owners share with existing, activated users by email, from the Checklists page: either **Share all lists** (live — includes lists created later) or **Share this list** on a single list.
+- Each share is **Can view** (read-only) or **Can edit** (check/uncheck, add, edit, reorder, delete items, reset). Renaming, changing the icon, deleting a list, and managing shares stay owner-only.
+- A list-specific share overrides the owner's share-all for that person, so you can share everything as edit but one list as view-only.
+- Checked state lives on the items, so it is shared: if someone with edit access checks an item, everyone sees it checked.
+- Shared lists appear on the Dashboard and Checklists page labelled with the owner. Revoking a share removes access immediately; deleting a list or account removes its shares.
+- API: `GET /api/shares`, `PUT /api/shares` (`{ email, permission, checklistId? }`; omit `checklistId` for all lists), `DELETE /api/shares/:id`. Lists and list detail include `access` (`owner` | `edit` | `view`) and `ownerEmail`. Unshared lists return `404`; insufficient access returns `403`.
+- The share endpoint reveals whether an email belongs to an active account (needed for a usable UI), so it is limited to 60 requests / 15 min per IP.
+
 ## Auth & security notes
 
 - Passwords: PBKDF2-HMAC-SHA256, 600,000 iterations, per-user 16-byte random salt, stored as `pbkdf2-sha256$<iter>$<salt>$<hash>`.
@@ -113,7 +123,9 @@ docker compose up -d --build
 │   ├── auth.ts      PBKDF2 hashing, session tokens
 │   ├── db.ts        SQLite connection + schema
 │   ├── mail.ts      SMTP (or console) delivery for invites
-│   └── ratelimit.ts in-memory attempt limiter
+│   ├── ratelimit.ts in-memory attempt limiter
+│   ├── checklists.ts checklist + item routes with access checks
+│   └── shares.ts    per-list / all-lists sharing routes
 ├── src/             React app
 │   ├── App.tsx      shell + auth screens
 │   ├── api.ts       fetch client for /api
