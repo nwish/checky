@@ -84,16 +84,6 @@ docker compose up -d --build
 - First account: same as above — register via the UI (it becomes the admin)
   - Invitation emails need the `SMTP_*` env vars (see Configuration); without them the email is logged to the container's console
 
-## Deployment (Cloudflare Workers — development)
-
-Workers is an optional, separate deployment target. It keeps the normal Node/Express + SQLite app fully intact for local and Docker use, but uses a Cloudflare D1 database because Workers cannot run `better-sqlite3` or retain a local SQLite file.
-
-1. Install dependencies: `npm install`
-2. Start a local Workers preview: `npm run dev:worker`
-3. Deploy the development Worker: `npm run deploy:worker`
-
-The first Worker command creates the `rerun` D1 database (when it does not already exist), discovers its UUID, and generates an ignored `wrangler.generated.json` with the binding. Deployment then applies migrations and publishes the Worker. No database ID needs to be copied into source control. The Worker serves the Vite build and `/api/*` from one origin, so its session cookie works normally. Its D1 data is intentionally separate from `data/rerun.db`; it is not a sync target. This is a live beta deployment, so the D1 database holds real data. Invite emails are logged by the Worker until an HTTP mail provider is added, while standalone/Docker continues to use the existing SMTP configuration.
-
 ## Accounts & invitations
 
 - The **first** account registered becomes the **admin**. After that, registration closes (`403`) — new users are added by invitation.
