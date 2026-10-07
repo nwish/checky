@@ -101,6 +101,11 @@ docker compose up -d --build
 - API: `GET /api/shares`, `PUT /api/shares` (`{ email, permission, checklistId? }`; omit `checklistId` for all lists), `DELETE /api/shares/:id`. Lists and list detail include `access` (`owner` | `edit` | `view`) and `ownerEmail`. Unshared lists return `404`; insufficient access returns `403`.
 - The share endpoint reveals whether an email belongs to an active account (needed for a usable UI), so it is limited to 60 requests / 15 min per IP.
 
+## Duplicating lists
+
+- **Duplicate** (on each list's card, Checklists page) copies a list into a new list you own, titled "<title> (copy)", with the same icon and items, all unchecked. Shares are not copied.
+- You can duplicate any list you can see, including view-only lists shared with you — the copy is yours to edit. API: `POST /api/checklists/:id/duplicate` (`404` if the list isn't visible to you).
+
 ## Auth & security notes
 
 - Passwords: PBKDF2-HMAC-SHA256, 600,000 iterations, per-user 16-byte random salt, stored as `pbkdf2-sha256$<iter>$<salt>$<hash>`.

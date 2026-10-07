@@ -74,6 +74,7 @@ export const api = {
       json('PATCH', `/api/checklists/${id}`, patch)
     ),
   deleteChecklist: (id: number) => request<{ ok: boolean }>(`/api/checklists/${id}`, { method: 'DELETE' }),
+  duplicateChecklist: (id: number) => request<Checklist>(`/api/checklists/${id}/duplicate`, { method: 'POST' }),
   resetChecklist: (id: number) => request<{ items: ChecklistItem[] }>(`/api/checklists/${id}/reset`, { method: 'POST' }),
   addItem: (id: number, text: string) =>
     request<ChecklistItem>(`/api/checklists/${id}/items`, json('POST', `/api/checklists/${id}/items`, { text })),

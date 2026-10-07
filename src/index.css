@@ -1019,6 +1019,17 @@ button.link:active {
   height: 15px;
 }
 
+.checklist-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.checklist-card-actions .checklist-delete {
+  margin-top: 0;
+}
+
 /* ---- Sharing ---- */
 
 select {

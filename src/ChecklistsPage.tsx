@@ -76,6 +76,11 @@ export default function ChecklistsPage() {
     refresh()
   }
 
+  async function handleDuplicated(id: number) {
+    await refresh()
+    setExpandedId(id)
+  }
+
   return (
     <>
       <section className="card checklist-new-card">
@@ -136,6 +141,7 @@ export default function ChecklistsPage() {
               expanded={expandedId === summary.id}
               onToggle={() => setExpandedId(expandedId === summary.id ? null : summary.id)}
               onDeleted={handleDeleted}
+              onDuplicated={handleDuplicated}
               onChanged={refresh}
             />
           ))}
@@ -151,6 +157,7 @@ function ChecklistCard({
   expanded,
   onToggle,
   onDeleted,
+  onDuplicated,
   onChanged
 }: {
   summary: ChecklistSummary
@@ -158,6 +165,7 @@ function ChecklistCard({
   expanded: boolean
   onToggle: () => void
   onDeleted: (id: number) => void
+  onDuplicated: (id: number) => void
   onChanged: () => void
 }) {
   const isOwner = summary.access === 'owner'
@@ -226,6 +234,11 @@ function ChecklistCard({
   async function removeChecklist() {
     await api.deleteChecklist(summary.id)
     onDeleted(summary.id)
+  }
+
+  async function duplicateChecklist() {
+    const copy = await api.duplicateChecklist(summary.id)
+    onDuplicated(copy.id)
   }
 
   const HeaderIcon = checklistIcon(summary.icon)
@@ -306,18 +319,23 @@ function ChecklistCard({
           )}
 
           {isOwner && (
-            <>
-              <div className="share-section">
-                <h4>Share this list</h4>
-                <SharePanel checklistId={summary.id} shares={shares} onChanged={onChanged} />
-              </div>
+            <div className="share-section">
+              <h4>Share this list</h4>
+              <SharePanel checklistId={summary.id} shares={shares} onChanged={onChanged} />
+            </div>
+          )}
 
+          <div className="checklist-card-actions">
+            <button type="button" className="ghost" onClick={duplicateChecklist}>
+              Duplicate
+            </button>
+            {isOwner && (
               <button type="button" className="ghost checklist-delete" onClick={removeChecklist}>
                 {icons.trash}
                 Delete checklist
               </button>
-            </>
-          )}
+            )}
+          </div>
         </div>
       )}
     </div>
