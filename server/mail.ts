@@ -16,7 +16,7 @@ export function smtpConfigured(): boolean {
 }
 
 export async function sendMail(to: string, subject: string, text: string, html: string): Promise<void> {
-  const from = process.env.SMTP_FROM ?? 'Checky <checky@localhost>'
+  const from = process.env.SMTP_FROM ?? 'Rerun <rerun@localhost>'
   await transport.sendMail({ from, to, subject, text, html })
   if (!process.env.SMTP_HOST) {
     console.warn('[mail] SMTP_HOST not set — email to %s was NOT sent (subject: %s)\n%s', to, subject, text)
@@ -43,16 +43,16 @@ function escapeHtml(value: string): string {
 
 export function inviteMail(link: string): { subject: string; text: string; html: string } {
   const inviteLink = inviteUrl(link).href
-  const subject = "You're invited to Checky"
+  const subject = "You're invited to Rerun"
   const text = [
-    'You have been invited to join Checky.',
+    'You have been invited to join Rerun.',
     '',
     `Set your password to activate your account: ${inviteLink}`,
     '',
     'This link is single-use. If you did not expect this invitation, you can ignore this email.'
   ].join('\n')
   const html = [
-    '<p>You have been invited to join Checky.</p>',
+    '<p>You have been invited to join Rerun.</p>',
     `<p><a href="${escapeHtml(inviteLink)}">Set your password</a> to activate your account.</p>`,
     '<p>This link is single-use. If you did not expect this invitation, you can ignore this email.</p>'
   ].join('\n')

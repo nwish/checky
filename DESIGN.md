@@ -1,5 +1,5 @@
 ---
-name: Checky
+name: Rerun
 description: A self-hosted checklist app styled as a creator's desk instrument — gunmetal chassis, keycap controls, one orange action key.
 colors:
   chassis: "#1a1b1e"
@@ -60,13 +60,13 @@ components:
     textColor: "{colors.ink}"
 ---
 
-# Design System: Checky
+# Design System: Rerun
 
 ## Overview
 
 **Creative North Star: "The Action Key"**
 
-Checky reads as a piece of equipment you own, not a cloud dashboard: a gunmetal desk instrument with keycap controls and exactly one confident orange key. Every clickable surface — buttons, nav items, list rows — behaves like a real key: it rests with depth, lifts under the pointer, and depresses on press. The system was chosen deliberately against the "purple gradient on dark slate" look that reads as generic AI-scaffolded software; there is no gradient anywhere in the system, on text or otherwise, and the single accent color is spent on exactly one thing per screen: the primary action.
+Rerun reads as a piece of equipment you own, not a cloud dashboard: a gunmetal desk instrument with keycap controls and exactly one confident orange key. Every clickable surface — buttons, nav items, list rows — behaves like a real key: it rests with depth, lifts under the pointer, and depresses on press. The system was chosen deliberately against the "purple gradient on dark slate" look that reads as generic AI-scaffolded software; there is no gradient anywhere in the system, on text or otherwise, and the single accent color is spent on exactly one thing per screen: the primary action.
 
 Two accent colors carry all meaning in this system, and they never trade places. Safety-orange (`--action`) means "the one thing to do here" — a primary submit button, the active nav item, the brand checkmark. Amber (`--status`) means "a live reading" — the admin status-readout digits, a pending-invite badge. A static role label, a decorative icon, or a focus ring never borrows either color; they stay in the neutral ink/legend/dim scale. Diluting either reservation is the single fastest way to make this system stop reading as an instrument and start reading as decoration.
 

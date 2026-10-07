@@ -8,7 +8,7 @@ type User = { id: number; email: string; role: Role }
 type Checklist = { id: number; user_id: number; title: string; icon: string | null; updated_at: string }
 type Item = { id: number; checklist_id: number; text: string; checked: number; position: number }
 
-const COOKIE_NAME = 'checky_session'
+const COOKIE_NAME = 'rerun_session'
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const TITLE_MAX = 200

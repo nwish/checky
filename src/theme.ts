@@ -21,7 +21,7 @@ export const THEMES: Theme[] = [
 ]
 
 export const DEFAULT_THEME: ThemeId = 'orange'
-const STORAGE_KEY = 'checky-theme'
+const STORAGE_KEY = 'rerun-theme'
 
 export function getStoredTheme(): ThemeId {
   try {

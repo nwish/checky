@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express'
 import { hashToken } from './auth.js'
 import { db } from './db.js'
 
-export const COOKIE_NAME = 'checky_session'
+export const COOKIE_NAME = 'rerun_session'
 
 export type Role = 'admin' | 'user'
 export type AuthedRequest = Request & { user: { id: number; email: string; role: Role } }

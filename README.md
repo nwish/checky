@@ -1,6 +1,6 @@
-# Checky
+# Rerun
 
-Checky turns repeatable activities into checklists. Build a list for each thing you do more than once — kayaking, road trips, campouts, yard work — then keep it exactly the way you want it.
+Rerun turns repeatable activities into checklists. Build a list for each thing you do more than once — kayaking, road trips, campouts, yard work — then keep it exactly the way you want it.
 
 Going kayaking? Open the kayaking list, run through it top to bottom, and go kayaking. Reset the list and it's ready for next time.
 
@@ -66,7 +66,7 @@ npm start        # serves UI and API on http://127.0.0.1:3001
 | `SMTP_SECURE` | —      | `1` for implicit TLS (port 465); default uses STARTTLS |
 | `SMTP_USER` | —        | SMTP auth user (optional; some relays need no auth) |
 | `SMTP_PASS` | —        | SMTP auth password |
-| `SMTP_FROM` | `Checky <checky@localhost>` | From address for emails |
+| `SMTP_FROM` | `Rerun <rerun@localhost>` | From address for emails |
 | `APP_URL`   | request origin | Base URL used in invitation links when the email is sent |
 
 The server reads a `.env` file from the repo root when present — create it from `.env.example`. Values in a real environment always take precedence over the file.
@@ -78,7 +78,7 @@ docker compose up -d --build
 ```
 
 - App: http://localhost:3001 (UI + API in one container)
-- SQLite persists in the `checky-data` named volume (`/app/data`)
+- SQLite persists in the `rerun-data` named volume (`/app/data`)
 - Healthcheck: `GET /api/health`
 - Behind a TLS reverse proxy: uncomment the `HTTPS=1` env in `docker-compose.yml`
 - First account: same as above — register via the UI (it becomes the admin)
@@ -92,7 +92,7 @@ Workers is an optional, separate deployment target. It keeps the normal Node/Exp
 2. Start a local Workers preview: `npm run dev:worker`
 3. Deploy the development Worker: `npm run deploy:worker`
 
-The first Worker command creates the `checky` D1 database (when it does not already exist), discovers its UUID, and generates an ignored `wrangler.generated.json` with the binding. Deployment then applies migrations and publishes the Worker. No database ID needs to be copied into source control. The Worker serves the Vite build and `/api/*` from one origin, so its session cookie works normally. Its D1 data is intentionally separate from `data/checky.db`; it is not a sync target. This is a live beta deployment, so the D1 database holds real data. Invite emails are logged by the Worker until an HTTP mail provider is added, while standalone/Docker continues to use the existing SMTP configuration.
+The first Worker command creates the `rerun` D1 database (when it does not already exist), discovers its UUID, and generates an ignored `wrangler.generated.json` with the binding. Deployment then applies migrations and publishes the Worker. No database ID needs to be copied into source control. The Worker serves the Vite build and `/api/*` from one origin, so its session cookie works normally. Its D1 data is intentionally separate from `data/rerun.db`; it is not a sync target. This is a live beta deployment, so the D1 database holds real data. Invite emails are logged by the Worker until an HTTP mail provider is added, while standalone/Docker continues to use the existing SMTP configuration.
 
 ## Accounts & invitations
 
@@ -104,7 +104,7 @@ The first Worker command creates the `checky` D1 database (when it does not alre
 ## Auth & security notes
 
 - Passwords: PBKDF2-HMAC-SHA256, 600,000 iterations, per-user 16-byte random salt, stored as `pbkdf2-sha256$<iter>$<salt>$<hash>`.
-- Sessions: 256-bit random token; only its SHA-256 hash is stored (with 30-day expiry); token delivered in an `HttpOnly`, `SameSite=Lax` cookie (`checky_session`).
+- Sessions: 256-bit random token; only its SHA-256 hash is stored (with 30-day expiry); token delivered in an `HttpOnly`, `SameSite=Lax` cookie (`rerun_session`).
 - Login never reveals whether an email exists, and unknown-email logins burn a dummy hash so timing stays uniform.
 - Invite links: 256-bit single-use token; only its SHA-256 hash is stored; consumed on activation or rotated on resend.
 - Rate limiting (in-memory, per IP+email): 5 logins / 5 min, 10 registrations / 15 min, 10 invites / 15 min, 5 activations per link / 5 min.
@@ -112,7 +112,7 @@ The first Worker command creates the `checky` D1 database (when it does not alre
 
 ## Data & reset
 
-- Database: `data/checky.db` (gitignored).
+- Database: `data/rerun.db` (gitignored).
 - Reset everything: stop the app, delete the `data/` directory, restart.
 
 ## Project layout

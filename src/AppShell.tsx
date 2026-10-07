@@ -88,9 +88,9 @@ export default function AppShell({
       <div className="app-nav-top">
         <div className="nav-top-row">
           <div className="nav-brand">
-            <img src="/checky.svg" alt="" />
+            <img src="/rerun.svg" alt="" />
             <div className="brand-text">
-              <strong>Checky</strong>
+              <strong>Rerun</strong>
               <span>Checklist workspace</span>
             </div>
           </div>

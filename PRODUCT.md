@@ -20,7 +20,7 @@ Local-first and self-hosted: everything lives in a single SQLite file on the use
 
 ## Operating Context
 
-- Self-hosted: run via `npm run dev` / `npm start`, or Docker Compose; data persists in a local SQLite file (`data/checky.db`).
+- Self-hosted: run via `npm run dev` / `npm start`, or Docker Compose; data persists in a local SQLite file (`data/rerun.db`).
 - The first registered account becomes admin; after that, registration closes (`403`) and new users join only via admin-issued email invites (single-use activation link).
 - Admin panel (role-gated) manages invites and lists members/pending invites; inviting an already-invited email rotates the link and resends.
 - Invitation email delivery is optional (`SMTP_*` env vars); without SMTP configured, invite links are logged to the server console instead of emailed.
@@ -35,7 +35,7 @@ Local-first and self-hosted: everything lives in a single SQLite file on the use
 
 ## Brand Commitments
 
-- Name: Checky. Logo: a rounded-square gradient mark (violet → cyan) with a white checkmark, used as favicon and nav-brand icon.
+- Name: Rerun. Logo: a rounded-square gradient mark (violet → cyan) with a white checkmark, used as favicon and nav-brand icon.
 - Visual identity: dark theme with a violet/cyan gradient accent (`src/index.css` design tokens: `--accent #7c6cff`, `--accent-2 #22d3ee`).
 - Tone: plain and utilitarian, no marketing embellishment (e.g. README's direct, matter-of-fact copy; UI copy like "Foundation ready").
 

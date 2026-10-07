@@ -302,6 +302,6 @@ app.use((err: Error & { status?: number }, _req: Request, res: Response, _next: 
 })
 
 app.listen(PORT, HOST, () => {
-  console.log('checky api listening on http://%s:%d', HOST === '0.0.0.0' ? 'localhost' : HOST, PORT)
+  console.log('rerun api listening on http://%s:%d', HOST === '0.0.0.0' ? 'localhost' : HOST, PORT)
   if (!smtpConfigured()) console.warn('[mail] SMTP_HOST not set — invitation emails will be logged, not sent')
 })

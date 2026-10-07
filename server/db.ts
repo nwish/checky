@@ -9,7 +9,7 @@ const dataDir = join(root, 'data')
 
 mkdirSync(dataDir, { recursive: true })
 
-export const db = new Database(join(dataDir, 'checky.db'))
+export const db = new Database(join(dataDir, 'rerun.db'))
 
 db.pragma('journal_mode = WAL')
 db.pragma('foreign_keys = ON')

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, type Checklist, type ChecklistSummary } from './api'
 import { checklistIcon } from './icons'
 
-const LAST_CHECKLIST_KEY = 'checky-last-checklist'
+const LAST_CHECKLIST_KEY = 'rerun-last-checklist'
 
 const icons = {
   checkEmpty: (
