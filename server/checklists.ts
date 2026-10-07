@@ -62,7 +62,11 @@ const statements = {
   updateItemChecked: db.prepare('UPDATE checklist_items SET checked = ? WHERE id = ?'),
   updateItemPosition: db.prepare('UPDATE checklist_items SET position = ? WHERE id = ?'),
   deleteItem: db.prepare('DELETE FROM checklist_items WHERE id = ?'),
-  resetItems: db.prepare(`UPDATE checklist_items SET checked = 0 WHERE checklist_id = ?`)
+  resetItems: db.prepare(`UPDATE checklist_items SET checked = 0 WHERE checklist_id = ?`),
+  copyItems: db.prepare(
+    `INSERT INTO checklist_items (checklist_id, text, checked, position)
+     SELECT ?, text, 0, position FROM checklist_items WHERE checklist_id = ?`
+  )
 }
 
 const TITLE_MAX = 200
@@ -198,6 +202,23 @@ checklistsRouter.delete('/:id', (req, res) => {
   if (!checklist) return
   statements.deleteChecklist.run(checklist.id)
   res.json({ ok: true })
+})
+
+/** Copies a list the user can see (own or shared) into a new list they own. Items are copied unchecked; shares are not copied. */
+checklistsRouter.post('/:id/duplicate', (req, res) => {
+  const me = (req as unknown as AuthedRequest).user
+  const source = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'view')
+  if (!source) return
+  const suffix = ' (copy)'
+  const title = `${source.title.slice(0, TITLE_MAX - suffix.length)}${suffix}`
+  const newId = db.transaction(() => {
+    const id = Number(statements.insertChecklist.run(me.id, title, source.icon).lastInsertRowid)
+    statements.copyItems.run(id, source.id)
+    return id
+  })()
+  const row = statements.findChecklist.get(newId) as ChecklistRow
+  const items = (statements.listItems.all(newId) as ItemRow[]).map(serializeItem)
+  res.status(201).json({ id: row.id, title: row.title, icon: row.icon, updatedAt: row.updated_at, access: 'owner', ownerEmail: row.owner_email, items })
 })
 
 checklistsRouter.post('/:id/reset', (req, res) => {
