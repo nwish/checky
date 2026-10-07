@@ -24,7 +24,8 @@
     "lucide-react": "^1.47.0",
     "nodemailer": "^10.0.9",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
@@ -33,6 +34,7 @@
     "@types/nodemailer": "^8.0.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@types/ws": "^8.18.2",
     "@vitejs/plugin-react": "^5.0.0",
     "concurrently": "^9.2.0",
     "cross-env": "^7.0.3",
