@@ -28,6 +28,25 @@ export type Checklist = { id: number; title: string; icon: string | null; update
 /** A share the current user has granted. checklistId null means "all my lists". */
 export type Share = { id: number; email: string; permission: SharePermission; checklistId: number | null }
 
+export type HistoryRun = {
+  id: number
+  checklistId: number
+  title: string
+  by: string | null
+  completedAt: string
+  durationSeconds: number | null
+  total: number
+  checked: number
+  missed: string[]
+}
+export type History = {
+  lists: Array<{ id: number; title: string; runs: number; lastRunAt: string; avgCompletion: number; avgDurationSeconds: number | null }>
+  summary: { runs: number; last30Days: number; avgCompletion: number | null; avgDurationSeconds: number | null }
+  weekly: Array<{ weekStart: string; runs: number }>
+  missed: Array<{ checklistId: number; listTitle: string; text: string; missed: number; appeared: number }>
+  runs: HistoryRun[]
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     credentials: 'same-origin',
@@ -90,5 +109,7 @@ export const api = {
   shares: () => request<{ shares: Share[] }>('/api/shares'),
   putShare: (email: string, permission: SharePermission, checklistId: number | null) =>
     request<Share>('/api/shares', json('PUT', '/api/shares', { email, permission, checklistId })),
-  deleteShare: (id: number) => request<{ ok: boolean }>(`/api/shares/${id}`, { method: 'DELETE' })
+  deleteShare: (id: number) => request<{ ok: boolean }>(`/api/shares/${id}`, { method: 'DELETE' }),
+
+  history: (checklistId: number | null) => request<History>(checklistId === null ? '/api/history' : `/api/history?checklistId=${checklistId}`)
 }

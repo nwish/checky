@@ -140,7 +140,7 @@ export default function DashboardPage({ navigate }: { navigate: (to: string) => 
         </div>
         <div className="run-header-actions">
           {canEdit && (
-            <button type="button" className="ghost" onClick={resetChecklist} disabled={done === 0}>
+            <button type="button" className="ghost" onClick={resetChecklist} disabled={done === 0} title="Save this run to History and clear the checks">
               {icons.reset}
               Reset
             </button>

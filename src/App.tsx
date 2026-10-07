@@ -4,6 +4,7 @@ import LoginPage from './LoginPage'
 import AdminPage from './AdminPage'
 import DashboardPage from './DashboardPage'
 import ChecklistsPage from './ChecklistsPage'
+import HistoryPage from './HistoryPage'
 import AppShell from './AppShell'
 import { useRoute } from './useRoute'
 
@@ -38,11 +39,13 @@ export default function App() {
 
   const isAdminRoute = path === '/admin' && state.user.role === 'admin'
   const isChecklistsRoute = path === '/checklists'
-  const activePath = isAdminRoute ? '/admin' : isChecklistsRoute ? '/checklists' : '/'
+  const isHistoryRoute = path === '/history'
+  const activePath = isAdminRoute ? '/admin' : isChecklistsRoute ? '/checklists' : isHistoryRoute ? '/history' : '/'
 
   const titles: Record<string, { title: string; subtitle: string }> = {
     '/': { title: 'Dashboard', subtitle: `Welcome back, ${state.user.email.split('@')[0]}.` },
     '/checklists': { title: 'Your checklists', subtitle: 'Build and customize the lists you run again and again.' },
+    '/history': { title: 'History', subtitle: 'Every finished run, and the items that keep getting skipped.' },
     '/admin': { title: 'Admin', subtitle: 'Invite teammates and manage access.' }
   }
 
@@ -55,7 +58,15 @@ export default function App() {
       title={titles[activePath].title}
       subtitle={titles[activePath].subtitle}
     >
-      {isAdminRoute ? <AdminPage /> : isChecklistsRoute ? <ChecklistsPage /> : <DashboardPage navigate={navigate} />}
+      {isAdminRoute ? (
+        <AdminPage />
+      ) : isChecklistsRoute ? (
+        <ChecklistsPage />
+      ) : isHistoryRoute ? (
+        <HistoryPage />
+      ) : (
+        <DashboardPage navigate={navigate} />
+      )}
     </AppShell>
   )
 }
