@@ -56,6 +56,22 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_checklists_user ON checklists(user_id);
   CREATE INDEX IF NOT EXISTS idx_checklist_items_checklist ON checklist_items(checklist_id);
+
+  -- checklist_id NULL means "every list the owner has, now and in future".
+  -- A list-specific row overrides the all-lists row for that list.
+  CREATE TABLE IF NOT EXISTS checklist_shares (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    grantee_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    checklist_id INTEGER REFERENCES checklists(id) ON DELETE CASCADE,
+    permission TEXT NOT NULL CHECK (permission IN ('view', 'edit')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (owner_id <> grantee_id)
+  );
+
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_checklist_shares_unique
+    ON checklist_shares(owner_id, grantee_id, COALESCE(checklist_id, 0));
+  CREATE INDEX IF NOT EXISTS idx_checklist_shares_grantee ON checklist_shares(grantee_id);
 `)
 
 // Migrate databases created before roles/invites existed.

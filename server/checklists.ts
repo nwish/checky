@@ -2,9 +2,10 @@ import { Router, type Response } from 'express'
 import { db } from './db.js'
 import { requireAuth, type AuthedRequest } from './middleware.js'
 
-type ChecklistRow = { id: number; user_id: number; title: string; icon: string | null; created_at: string; updated_at: string }
+type Access = 'owner' | 'edit' | 'view'
+type ChecklistRow = { id: number; user_id: number; title: string; icon: string | null; created_at: string; updated_at: string; owner_email: string }
 type ItemRow = { id: number; checklist_id: number; text: string; checked: number; position: number }
-type ListRow = { id: number; title: string; icon: string | null; updated_at: string; item_count: number; checked_count: number }
+type ListRow = { id: number; title: string; icon: string | null; updated_at: string; owner_email: string; access: Access; item_count: number; checked_count: number }
 
 // Kept in sync with src/icons.ts's CHECKLIST_ICONS list. A fixed, curated set
 // rather than free text: keeps the picker sane and rejects anything unknown.
@@ -21,17 +22,32 @@ const CHECKLIST_ICONS = [
 const CHECKLIST_ICON_SET = new Set(CHECKLIST_ICONS)
 
 const statements = {
+  // Own lists plus lists shared with @me. A list-specific share overrides the owner's all-lists share.
   listChecklists: db.prepare(
-    `SELECT c.id, c.title, c.icon, c.updated_at,
+    `SELECT c.id, c.title, c.icon, c.updated_at, u.email AS owner_email,
+            CASE WHEN c.user_id = @me THEN 'owner' ELSE COALESCE(per.permission, al.permission) END AS access,
             COUNT(ci.id) AS item_count,
             COALESCE(SUM(ci.checked), 0) AS checked_count
        FROM checklists c
+       JOIN users u ON u.id = c.user_id
+       LEFT JOIN checklist_shares per ON per.grantee_id = @me AND per.checklist_id = c.id
+       LEFT JOIN checklist_shares al ON al.grantee_id = @me AND al.owner_id = c.user_id AND al.checklist_id IS NULL
        LEFT JOIN checklist_items ci ON ci.checklist_id = c.id
-      WHERE c.user_id = ?
+      WHERE c.user_id = @me OR per.id IS NOT NULL OR al.id IS NOT NULL
       GROUP BY c.id
       ORDER BY c.updated_at DESC, c.id DESC`
   ),
-  findChecklist: db.prepare('SELECT id, user_id, title, icon, created_at, updated_at FROM checklists WHERE id = ?'),
+  sharedAccess: db.prepare(
+    `SELECT COALESCE(
+              (SELECT permission FROM checklist_shares WHERE grantee_id = @me AND checklist_id = @id),
+              (SELECT permission FROM checklist_shares WHERE grantee_id = @me AND owner_id = @owner AND checklist_id IS NULL)
+            ) AS permission`
+  ),
+  findChecklist: db.prepare(
+    `SELECT c.id, c.user_id, c.title, c.icon, c.created_at, c.updated_at, u.email AS owner_email
+       FROM checklists c JOIN users u ON u.id = c.user_id
+      WHERE c.id = ?`
+  ),
   insertChecklist: db.prepare('INSERT INTO checklists (user_id, title, icon) VALUES (?, ?, ?)'),
   renameChecklist: db.prepare(`UPDATE checklists SET title = ?, updated_at = datetime('now') WHERE id = ?`),
   updateChecklistIcon: db.prepare(`UPDATE checklists SET icon = ?, updated_at = datetime('now') WHERE id = ?`),
@@ -60,31 +76,52 @@ function serializeItem(row: ItemRow) {
   return { id: row.id, text: row.text, checked: Boolean(row.checked), position: row.position }
 }
 
-/** Loads a checklist and verifies the current user owns it. Sends 404 and returns null otherwise. */
-function loadOwned(req: AuthedRequest, res: Response, id: number): ChecklistRow | null {
+const ACCESS_RANK: Record<Access, number> = { view: 1, edit: 2, owner: 3 }
+
+/**
+ * Loads a checklist and verifies the current user has at least `need` access to it.
+ * Sends 404 when it doesn't exist or isn't visible to the user, 403 when visible but
+ * not permitted. Returns null in both cases.
+ */
+function loadChecklist(req: AuthedRequest, res: Response, id: number, need: Access): (ChecklistRow & { access: Access }) | null {
   if (!Number.isInteger(id)) {
     res.status(404).json({ error: 'checklist not found' })
     return null
   }
   const row = statements.findChecklist.get(id) as ChecklistRow | undefined
-  if (!row || row.user_id !== req.user.id) {
+  let access: Access | null = null
+  if (row) {
+    if (row.user_id === req.user.id) {
+      access = 'owner'
+    } else {
+      const shared = statements.sharedAccess.get({ me: req.user.id, id: row.id, owner: row.user_id }) as { permission: Access | null }
+      access = shared.permission
+    }
+  }
+  if (!row || !access) {
     res.status(404).json({ error: 'checklist not found' })
     return null
   }
-  return row
+  if (ACCESS_RANK[access] < ACCESS_RANK[need]) {
+    res.status(403).json({ error: need === 'owner' ? 'only the owner can do that' : 'you have view-only access to this checklist' })
+    return null
+  }
+  return { ...row, access }
 }
 
 export const checklistsRouter = Router()
 checklistsRouter.use(requireAuth)
 
 checklistsRouter.get('/', (req, res) => {
-  const rows = statements.listChecklists.all((req as unknown as AuthedRequest).user.id) as ListRow[]
+  const rows = statements.listChecklists.all({ me: (req as unknown as AuthedRequest).user.id }) as ListRow[]
   res.json({
     checklists: rows.map((r) => ({
       id: r.id,
       title: r.title,
       icon: r.icon,
       updatedAt: r.updated_at,
+      access: r.access,
+      ownerEmail: r.owner_email,
       itemCount: r.item_count,
       checkedCount: r.checked_count
     }))
@@ -107,18 +144,26 @@ checklistsRouter.post('/', (req, res) => {
   const info = statements.insertChecklist.run((req as unknown as AuthedRequest).user.id, title, icon)
   const id = Number(info.lastInsertRowid)
   const row = statements.findChecklist.get(id) as ChecklistRow
-  res.status(201).json({ id: row.id, title: row.title, icon: row.icon, updatedAt: row.updated_at, items: [] })
+  res.status(201).json({ id: row.id, title: row.title, icon: row.icon, updatedAt: row.updated_at, access: 'owner', ownerEmail: row.owner_email, items: [] })
 })
 
 checklistsRouter.get('/:id', (req, res) => {
-  const checklist = loadOwned(req as unknown as AuthedRequest, res, Number(req.params.id))
+  const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'view')
   if (!checklist) return
   const items = (statements.listItems.all(checklist.id) as ItemRow[]).map(serializeItem)
-  res.json({ id: checklist.id, title: checklist.title, icon: checklist.icon, updatedAt: checklist.updated_at, items })
+  res.json({
+    id: checklist.id,
+    title: checklist.title,
+    icon: checklist.icon,
+    updatedAt: checklist.updated_at,
+    access: checklist.access,
+    ownerEmail: checklist.owner_email,
+    items
+  })
 })
 
 checklistsRouter.patch('/:id', (req, res) => {
-  const checklist = loadOwned(req as unknown as AuthedRequest, res, Number(req.params.id))
+  const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'owner')
   if (!checklist) return
   const body = req.body as Record<string, unknown>
 
@@ -149,14 +194,14 @@ checklistsRouter.patch('/:id', (req, res) => {
 })
 
 checklistsRouter.delete('/:id', (req, res) => {
-  const checklist = loadOwned(req as unknown as AuthedRequest, res, Number(req.params.id))
+  const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'owner')
   if (!checklist) return
   statements.deleteChecklist.run(checklist.id)
   res.json({ ok: true })
 })
 
 checklistsRouter.post('/:id/reset', (req, res) => {
-  const checklist = loadOwned(req as unknown as AuthedRequest, res, Number(req.params.id))
+  const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'edit')
   if (!checklist) return
   statements.resetItems.run(checklist.id)
   statements.touchChecklist.run(checklist.id)
@@ -165,7 +210,7 @@ checklistsRouter.post('/:id/reset', (req, res) => {
 })
 
 checklistsRouter.post('/:id/items', (req, res) => {
-  const checklist = loadOwned(req as unknown as AuthedRequest, res, Number(req.params.id))
+  const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'edit')
   if (!checklist) return
   const text = asString((req.body as Record<string, unknown>)?.text).trim()
   if (!text) {
@@ -184,7 +229,7 @@ checklistsRouter.post('/:id/items', (req, res) => {
 })
 
 checklistsRouter.patch('/:id/items/:itemId', (req, res) => {
-  const checklist = loadOwned(req as unknown as AuthedRequest, res, Number(req.params.id))
+  const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'edit')
   if (!checklist) return
   const item = statements.findItem.get(Number(req.params.itemId)) as ItemRow | undefined
   if (!item || item.checklist_id !== checklist.id) {
@@ -213,7 +258,7 @@ checklistsRouter.patch('/:id/items/:itemId', (req, res) => {
 })
 
 checklistsRouter.delete('/:id/items/:itemId', (req, res) => {
-  const checklist = loadOwned(req as unknown as AuthedRequest, res, Number(req.params.id))
+  const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'edit')
   if (!checklist) return
   const item = statements.findItem.get(Number(req.params.itemId)) as ItemRow | undefined
   if (!item || item.checklist_id !== checklist.id) {
@@ -226,7 +271,7 @@ checklistsRouter.delete('/:id/items/:itemId', (req, res) => {
 })
 
 checklistsRouter.post('/:id/items/:itemId/move', (req, res) => {
-  const checklist = loadOwned(req as unknown as AuthedRequest, res, Number(req.params.id))
+  const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'edit')
   if (!checklist) return
   const item = statements.findItem.get(Number(req.params.itemId)) as ItemRow | undefined
   if (!item || item.checklist_id !== checklist.id) {
