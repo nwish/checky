@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { rateLimit } from 'express-rate-limit'
 import { hashPassword, hashToken, newToken, verifyPassword } from './auth.js'
 import { checklistsRouter } from './checklists.js'
+import { historyRouter } from './history.js'
 import { sharesRouter } from './shares.js'
 import { db } from './db.js'
 import { inviteMail, sendMail, smtpConfigured } from './mail.js'
@@ -135,6 +136,7 @@ app.disable('x-powered-by')
 app.use(express.json({ limit: '16kb' }))
 app.use('/api/checklists', checklistsRouter)
 app.use('/api/shares', sharesRouter)
+app.use('/api/history', historyRouter)
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, smtp: smtpConfigured() })

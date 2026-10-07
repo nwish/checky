@@ -63,6 +63,17 @@ const statements = {
   updateItemPosition: db.prepare('UPDATE checklist_items SET position = ? WHERE id = ?'),
   deleteItem: db.prepare('DELETE FROM checklist_items WHERE id = ?'),
   resetItems: db.prepare(`UPDATE checklist_items SET checked = 0 WHERE checklist_id = ?`),
+  markRunStarted: db.prepare(`UPDATE checklists SET run_started_at = datetime('now') WHERE id = ? AND run_started_at IS NULL`),
+  getRunStarted: db.prepare('SELECT run_started_at FROM checklists WHERE id = ?'),
+  clearRunStarted: db.prepare('UPDATE checklists SET run_started_at = NULL WHERE id = ?'),
+  insertRun: db.prepare(
+    `INSERT INTO checklist_runs (checklist_id, user_id, title, started_at, total_items, checked_items)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ),
+  snapshotRunItems: db.prepare(
+    `INSERT INTO checklist_run_items (run_id, text, checked, position)
+     SELECT ?, text, checked, position FROM checklist_items WHERE checklist_id = ?`
+  ),
   copyItems: db.prepare(
     `INSERT INTO checklist_items (checklist_id, text, checked, position)
      SELECT ?, text, 0, position FROM checklist_items WHERE checklist_id = ?`
@@ -224,10 +235,21 @@ checklistsRouter.post('/:id/duplicate', (req, res) => {
 checklistsRouter.post('/:id/reset', (req, res) => {
   const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'edit')
   if (!checklist) return
-  statements.resetItems.run(checklist.id)
-  statements.touchChecklist.run(checklist.id)
-  const items = (statements.listItems.all(checklist.id) as ItemRow[]).map(serializeItem)
-  res.json({ items })
+  // A reset ends a run: record it (if anything was checked) before the checks are cleared.
+  const me = (req as unknown as AuthedRequest).user
+  const items = statements.listItems.all(checklist.id) as ItemRow[]
+  const checkedCount = items.filter((i) => i.checked).length
+  db.transaction(() => {
+    if (checkedCount > 0) {
+      const { run_started_at } = statements.getRunStarted.get(checklist.id) as { run_started_at: string | null }
+      const runId = Number(statements.insertRun.run(checklist.id, me.id, checklist.title, run_started_at, items.length, checkedCount).lastInsertRowid)
+      statements.snapshotRunItems.run(runId, checklist.id)
+    }
+    statements.resetItems.run(checklist.id)
+    statements.clearRunStarted.run(checklist.id)
+    statements.touchChecklist.run(checklist.id)
+  })()
+  res.json({ items: (statements.listItems.all(checklist.id) as ItemRow[]).map(serializeItem) })
 })
 
 checklistsRouter.post('/:id/items', (req, res) => {
@@ -272,6 +294,7 @@ checklistsRouter.patch('/:id/items/:itemId', (req, res) => {
   }
   if (typeof body?.checked === 'boolean') {
     statements.updateItemChecked.run(body.checked ? 1 : 0, item.id)
+    if (body.checked) statements.markRunStarted.run(checklist.id)
   }
   statements.touchChecklist.run(checklist.id)
   const updated = statements.findItem.get(item.id) as ItemRow

@@ -72,6 +72,30 @@ db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_checklist_shares_unique
     ON checklist_shares(owner_id, grantee_id, COALESCE(checklist_id, 0));
   CREATE INDEX IF NOT EXISTS idx_checklist_shares_grantee ON checklist_shares(grantee_id);
+
+  -- One row per completed run, written when a list with checked items is reset.
+  -- title and the item snapshot are frozen so history survives later edits.
+  CREATE TABLE IF NOT EXISTS checklist_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    checklist_id INTEGER NOT NULL REFERENCES checklists(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    title TEXT NOT NULL,
+    started_at TEXT,
+    completed_at TEXT NOT NULL DEFAULT (datetime('now')),
+    total_items INTEGER NOT NULL,
+    checked_items INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS checklist_run_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id INTEGER NOT NULL REFERENCES checklist_runs(id) ON DELETE CASCADE,
+    text TEXT NOT NULL,
+    checked INTEGER NOT NULL,
+    position INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_checklist_runs_checklist ON checklist_runs(checklist_id, completed_at);
+  CREATE INDEX IF NOT EXISTS idx_checklist_run_items_run ON checklist_run_items(run_id);
 `)
 
 // Migrate databases created before roles/invites existed.
@@ -88,4 +112,10 @@ if (!names.has('activated_at')) db.exec('ALTER TABLE users ADD COLUMN activated_
 const checklistColumns = db.prepare('PRAGMA table_info(checklists)').all() as Array<{ name: string }>
 if (!checklistColumns.some((c) => c.name === 'icon')) {
   db.exec('ALTER TABLE checklists ADD COLUMN icon TEXT')
+}
+
+// Migrate checklists created before run history existed. Set when the first item is
+// checked after a reset, so a run's duration can be measured.
+if (!checklistColumns.some((c) => c.name === 'run_started_at')) {
+  db.exec('ALTER TABLE checklists ADD COLUMN run_started_at TEXT')
 }
