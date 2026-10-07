@@ -107,6 +107,7 @@ export default function DashboardPage({ navigate }: { navigate: (to: string) => 
               <button key={s.id} type="button" className="checklist-pick-card" onClick={() => setActiveId(s.id)}>
                 <span className="checklist-card-icon"><Icon /></span>
                 <span className="checklist-card-title">{s.title}</span>
+                {s.access !== 'owner' && <span className="checklist-card-meta share-owner">from {s.ownerEmail}</span>}
                 <span className="checklist-card-meta">{s.checkedCount}/{s.itemCount}</span>
               </button>
             )
@@ -121,6 +122,7 @@ export default function DashboardPage({ navigate }: { navigate: (to: string) => 
 
   const total = checklist.items.length
   const done = checklist.items.filter((i) => i.checked).length
+  const canEdit = checklist.access !== 'view'
   const TitleIcon = checklistIcon(checklist.icon)
 
   return (
@@ -130,14 +132,19 @@ export default function DashboardPage({ navigate }: { navigate: (to: string) => 
           <span className="checklist-card-icon run-header-icon"><TitleIcon /></span>
           <div>
             <h2>{checklist.title}</h2>
-            <p className="muted">{done}/{total} checked</p>
+            <p className="muted">
+              {done}/{total} checked
+              {checklist.access !== 'owner' && ` · shared by ${checklist.ownerEmail}${canEdit ? '' : ' · view only'}`}
+            </p>
           </div>
         </div>
         <div className="run-header-actions">
-          <button type="button" className="ghost" onClick={resetChecklist} disabled={done === 0}>
-            {icons.reset}
-            Reset
-          </button>
+          {canEdit && (
+            <button type="button" className="ghost" onClick={resetChecklist} disabled={done === 0}>
+              {icons.reset}
+              Reset
+            </button>
+          )}
           {summaries.length > 1 && (
             <button type="button" className="ghost" onClick={() => setActiveId(null)}>
               {icons.switchList}
@@ -149,7 +156,12 @@ export default function DashboardPage({ navigate }: { navigate: (to: string) => 
 
       {total === 0 ? (
         <p className="muted">
-          This checklist has no items yet. <button type="button" className="link" onClick={() => navigate('/checklists')}>Add some</button>.
+          This checklist has no items yet.{' '}
+          {canEdit && (
+            <>
+              <button type="button" className="link" onClick={() => navigate('/checklists')}>Add some</button>.
+            </>
+          )}
         </p>
       ) : (
         <ul className="run-item-list">
@@ -159,6 +171,7 @@ export default function DashboardPage({ navigate }: { navigate: (to: string) => 
                 type="button"
                 className={`run-item${item.checked ? ' checked' : ''}`}
                 onClick={() => toggleItem(item.id, !item.checked)}
+                disabled={!canEdit}
               >
                 <span className="run-item-check">{item.checked ? icons.checkFilled : icons.checkEmpty}</span>
                 <span className="run-item-text">{item.text}</span>

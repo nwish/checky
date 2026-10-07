@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { api, type Checklist, type ChecklistSummary } from './api'
+import { api, type Checklist, type ChecklistSummary, type Share } from './api'
 import IconPicker from './IconPicker'
+import SharePanel from './SharePanel'
 import { checklistIcon, DEFAULT_CHECKLIST_ICON } from './icons'
 
 const icons = {
@@ -34,6 +35,7 @@ const icons = {
 
 export default function ChecklistsPage() {
   const [checklists, setChecklists] = useState<ChecklistSummary[] | null>(null)
+  const [shares, setShares] = useState<Share[]>([])
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [newTitle, setNewTitle] = useState('')
   const [newIcon, setNewIcon] = useState(DEFAULT_CHECKLIST_ICON)
@@ -45,8 +47,9 @@ export default function ChecklistsPage() {
   }, [])
 
   async function refresh() {
-    const r = await api.checklists()
-    setChecklists(r.checklists)
+    const [lists, granted] = await Promise.all([api.checklists(), api.shares()])
+    setChecklists(lists.checklists)
+    setShares(granted.shares)
   }
 
   async function createChecklist(e: React.FormEvent) {
@@ -94,16 +97,42 @@ export default function ChecklistsPage() {
         </form>
       </section>
 
+      <section className="card checklist-new-card checklist-section-gap">
+        <h2>Share all lists</h2>
+        <p className="muted">
+          People added here can see every list you have, including ones you create later. A list's own sharing settings override this for that list.
+        </p>
+        <SharePanel checklistId={null} shares={shares} onChanged={refresh} />
+      </section>
+
       {checklists === null ? (
         <p className="muted checklist-section-gap">Loading…</p>
       ) : checklists.length === 0 ? (
         <p className="muted checklist-section-gap">No checklists yet — create your first one above.</p>
       ) : (
-        <div className="checklist-list checklist-section-gap">
-          {checklists.map((summary) => (
+        <>
+          {renderGroup(checklists.filter((c) => c.access === 'owner'), null)}
+          {checklists.some((c) => c.access !== 'owner') &&
+            renderGroup(
+              checklists.filter((c) => c.access !== 'owner'),
+              'Shared with you'
+            )}
+        </>
+      )}
+    </>
+  )
+
+  function renderGroup(group: ChecklistSummary[], heading: string | null) {
+    if (group.length === 0) return null
+    return (
+      <div className="checklist-section-gap">
+        {heading && <h3 className="checklist-group-heading">{heading}</h3>}
+        <div className="checklist-list">
+          {group.map((summary) => (
             <ChecklistCard
               key={summary.id}
               summary={summary}
+              shares={shares}
               expanded={expandedId === summary.id}
               onToggle={() => setExpandedId(expandedId === summary.id ? null : summary.id)}
               onDeleted={handleDeleted}
@@ -111,24 +140,28 @@ export default function ChecklistsPage() {
             />
           ))}
         </div>
-      )}
-    </>
-  )
+      </div>
+    )
+  }
 }
 
 function ChecklistCard({
   summary,
+  shares,
   expanded,
   onToggle,
   onDeleted,
   onChanged
 }: {
   summary: ChecklistSummary
+  shares: Share[]
   expanded: boolean
   onToggle: () => void
   onDeleted: (id: number) => void
   onChanged: () => void
 }) {
+  const isOwner = summary.access === 'owner'
+  const canEdit = summary.access !== 'view'
   const [checklist, setChecklist] = useState<Checklist | null>(null)
   const [titleDraft, setTitleDraft] = useState(summary.title)
   const [newItem, setNewItem] = useState('')
@@ -202,20 +235,29 @@ function ChecklistCard({
       <button type="button" className={`checklist-card-header${expanded ? ' open' : ''}`} onClick={onToggle}>
         <span className="checklist-card-icon"><HeaderIcon /></span>
         <span className="checklist-card-title">{summary.title}</span>
+        {!isOwner && <span className="checklist-card-meta share-owner">from {summary.ownerEmail}</span>}
         <span className="checklist-card-meta">{summary.checkedCount}/{summary.itemCount}</span>
         <span className="checklist-card-chevron">{icons.chevron}</span>
       </button>
 
       {expanded && (
         <div className="checklist-card-body">
-          <label>
-            Title
-            <input value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)} onBlur={saveTitle} maxLength={200} />
-          </label>
-          <label>
-            Icon
-            <IconPicker value={summary.icon} onChange={saveIcon} />
-          </label>
+          {isOwner ? (
+            <>
+              <label>
+                Title
+                <input value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)} onBlur={saveTitle} maxLength={200} />
+              </label>
+              <label>
+                Icon
+                <IconPicker value={summary.icon} onChange={saveIcon} />
+              </label>
+            </>
+          ) : (
+            <p className="muted share-access-note">
+              Shared by {summary.ownerEmail} — {canEdit ? 'you can edit items' : 'view only'}.
+            </p>
+          )}
 
           {!checklist ? (
             <p className="muted">Loading…</p>
@@ -229,39 +271,53 @@ function ChecklistCard({
                     onChange={(e) => setItemTextLocal(item.id, e.target.value)}
                     onBlur={() => saveItemText(item.id)}
                     maxLength={500}
+                    readOnly={!canEdit}
                   />
-                  <div className="checklist-item-actions">
-                    <button type="button" className="ghost" onClick={() => moveItem(item.id, 'up')} disabled={idx === 0} aria-label="Move item up">
-                      {icons.up}
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost"
-                      onClick={() => moveItem(item.id, 'down')}
-                      disabled={idx === checklist.items.length - 1}
-                      aria-label="Move item down"
-                    >
-                      {icons.down}
-                    </button>
-                    <button type="button" className="ghost" onClick={() => removeItem(item.id)} aria-label="Delete item">
-                      {icons.trash}
-                    </button>
-                  </div>
+                  {canEdit && (
+                    <div className="checklist-item-actions">
+                      <button type="button" className="ghost" onClick={() => moveItem(item.id, 'up')} disabled={idx === 0} aria-label="Move item up">
+                        {icons.up}
+                      </button>
+                      <button
+                        type="button"
+                        className="ghost"
+                        onClick={() => moveItem(item.id, 'down')}
+                        disabled={idx === checklist.items.length - 1}
+                        aria-label="Move item down"
+                      >
+                        {icons.down}
+                      </button>
+                      <button type="button" className="ghost" onClick={() => removeItem(item.id)} aria-label="Delete item">
+                        {icons.trash}
+                      </button>
+                    </div>
+                  )}
                 </li>
               ))}
               {checklist.items.length === 0 && <li className="muted">No items yet</li>}
             </ul>
           )}
 
-          <form onSubmit={addItem} className="checklist-add-item-form">
-            <input value={newItem} onChange={(e) => setNewItem(e.target.value)} placeholder="Add an item…" maxLength={500} />
-            <button type="submit">Add item</button>
-          </form>
+          {canEdit && (
+            <form onSubmit={addItem} className="checklist-add-item-form">
+              <input value={newItem} onChange={(e) => setNewItem(e.target.value)} placeholder="Add an item…" maxLength={500} />
+              <button type="submit">Add item</button>
+            </form>
+          )}
 
-          <button type="button" className="ghost checklist-delete" onClick={removeChecklist}>
-            {icons.trash}
-            Delete checklist
-          </button>
+          {isOwner && (
+            <>
+              <div className="share-section">
+                <h4>Share this list</h4>
+                <SharePanel checklistId={summary.id} shares={shares} onChanged={onChanged} />
+              </div>
+
+              <button type="button" className="ghost checklist-delete" onClick={removeChecklist}>
+                {icons.trash}
+                Delete checklist
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

@@ -12,8 +12,21 @@ export type AdminUser = {
 }
 
 export type ChecklistItem = { id: number; text: string; checked: boolean; position: number }
-export type ChecklistSummary = { id: number; title: string; icon: string | null; updatedAt: string; itemCount: number; checkedCount: number }
-export type Checklist = { id: number; title: string; icon: string | null; updatedAt: string; items: ChecklistItem[] }
+export type Access = 'owner' | 'edit' | 'view'
+export type SharePermission = 'view' | 'edit'
+export type ChecklistSummary = {
+  id: number
+  title: string
+  icon: string | null
+  updatedAt: string
+  access: Access
+  ownerEmail: string
+  itemCount: number
+  checkedCount: number
+}
+export type Checklist = { id: number; title: string; icon: string | null; updatedAt: string; access: Access; ownerEmail: string; items: ChecklistItem[] }
+/** A share the current user has granted. checklistId null means "all my lists". */
+export type Share = { id: number; email: string; permission: SharePermission; checklistId: number | null }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -71,5 +84,10 @@ export const api = {
     request<{ items: ChecklistItem[] }>(
       `/api/checklists/${id}/items/${itemId}/move`,
       json('POST', `/api/checklists/${id}/items/${itemId}/move`, { direction })
-    )
+    ),
+
+  shares: () => request<{ shares: Share[] }>('/api/shares'),
+  putShare: (email: string, permission: SharePermission, checklistId: number | null) =>
+    request<Share>('/api/shares', json('PUT', '/api/shares', { email, permission, checklistId })),
+  deleteShare: (id: number) => request<{ ok: boolean }>(`/api/shares/${id}`, { method: 'DELETE' })
 }
