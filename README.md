@@ -106,6 +106,13 @@ docker compose up -d --build
 - **Duplicate** (on each list's card, Checklists page) copies a list into a new list you own, titled "<title> (copy)", with the same icon and items, all unchecked. Shares are not copied.
 - You can duplicate any list you can see, including view-only lists shared with you — the copy is yours to edit. API: `POST /api/checklists/:id/duplicate` (`404` if the list isn't visible to you).
 
+## Run history & analytics
+
+- **Reset records a run.** Resetting a list that has at least one checked item saves a run first: which items were checked or missed, who reset it, when, and how long it took (from the first check after the previous reset). Resetting with nothing checked records nothing.
+- The **History** page shows runs per week (last 12 weeks), runs in the last 30 days, average share of items checked, average time, the items you miss most often, a per-list breakdown (click a list to filter), and the latest 50 runs with the items that weren't checked.
+- History covers lists you own and lists shared with you; shared runs show who did them. Runs keep the list title and item text as they were at reset, so later edits don't rewrite history. Deleting a list deletes its runs.
+- Runs are only recorded from now on; earlier resets can't be reconstructed. API: `GET /api/history[?checklistId=]`.
+
 ## Auth & security notes
 
 - Passwords: PBKDF2-HMAC-SHA256, 600,000 iterations, per-user 16-byte random salt, stored as `pbkdf2-sha256$<iter>$<salt>$<hash>`.
@@ -130,7 +137,8 @@ docker compose up -d --build
 │   ├── mail.ts      SMTP (or console) delivery for invites
 │   ├── ratelimit.ts in-memory attempt limiter
 │   ├── checklists.ts checklist + item routes with access checks
-│   └── shares.ts    per-list / all-lists sharing routes
+│   ├── shares.ts    per-list / all-lists sharing routes
+│   └── history.ts   run history + analytics route
 ├── src/             React app
 │   ├── App.tsx      shell + auth screens
 │   ├── api.ts       fetch client for /api
