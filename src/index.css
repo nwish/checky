@@ -1458,6 +1458,55 @@ select:focus {
   color: var(--status);
 }
 
+.run-reset-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 10%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--success) 40%, var(--key-border));
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  animation: run-reset-notice-in 0.2s ease-out;
+}
+
+.run-reset-notice-icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.run-reset-notice-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.run-reset-notice-text {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.run-reset-notice button.link {
+  margin: 0 0 0 auto;
+  padding: 5px 10px;
+  font-size: 0.82rem;
+}
+
+@keyframes run-reset-notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .run-reset-notice {
+    animation: none;
+  }
+}
+
 .run-header-actions {
   display: flex;
   gap: 8px;

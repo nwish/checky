@@ -5,6 +5,7 @@ import Avatar, { ownerLabel, personName } from './Avatar'
 import { checklistIcon } from './icons'
 
 const LAST_CHECKLIST_KEY = 'rerun-last-checklist'
+const RESET_NOTICE_MS = 8000
 
 const icons = {
   checkEmpty: (
@@ -37,6 +38,7 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
   const [summaries, setSummaries] = useState<ChecklistSummary[] | null>(null)
   const [activeId, setActiveId] = useState<number | null>(null)
   const [checklist, setChecklist] = useState<Checklist | null>(null)
+  const [resetNotice, setResetNotice] = useState<{ checked: number; total: number } | null>(null)
 
   useEffect(() => {
     api.checklists().then((r) => {
@@ -49,6 +51,17 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
       }
     })
   }, [])
+
+  // The confirmation belongs to the run that was just reset; drop it after a while or when switching lists.
+  useEffect(() => {
+    if (!resetNotice) return
+    const timer = window.setTimeout(() => setResetNotice(null), RESET_NOTICE_MS)
+    return () => window.clearTimeout(timer)
+  }, [resetNotice])
+
+  useEffect(() => {
+    setResetNotice(null)
+  }, [activeId])
 
   useEffect(() => {
     if (activeId === null) {
@@ -82,6 +95,7 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
   const others = here.filter((p) => p.email !== email)
 
   async function toggleItem(itemId: number, checked: boolean) {
+    setResetNotice(null)
     if (!checklist) return
     setChecklist((c) => (c ? { ...c, items: c.items.map((i) => (i.id === itemId ? { ...i, checked } : i)) } : c))
     try {
@@ -93,8 +107,10 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
 
   async function resetChecklist() {
     if (!checklist) return
+    const saved = { checked: checklist.items.filter((i) => i.checked).length, total: checklist.items.length }
     const r = await api.resetChecklist(checklist.id)
     setChecklist((c) => (c ? { ...c, items: r.items } : c))
+    setResetNotice(saved)
   }
 
   if (summaries === null) return <p className="muted">Loading…</p>
@@ -123,7 +139,7 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
   if (!checklist || activeId === null) {
     return (
       <div className="checklist-picker">
-        <p className="muted">Which list are you running?</p>
+        <p className="muted">Which list are you (re)running?</p>
         <div className="checklist-list">
           {summaries.map((s) => {
             const Icon = checklistIcon(s.icon)
@@ -186,6 +202,18 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
           )}
         </div>
       </div>
+
+      {resetNotice && (
+        <p className="run-reset-notice" role="status">
+          <span className="run-reset-notice-icon">{icons.checkFilled}</span>
+          <span className="run-reset-notice-text">
+            Run saved to History — {resetNotice.checked}/{resetNotice.total} checked. Rerun when ready!
+          </span>
+          <button type="button" className="link" onClick={() => navigate('/history')}>
+            View in History
+          </button>
+        </p>
+      )}
 
       {total === 0 ? (
         <p className="muted">
