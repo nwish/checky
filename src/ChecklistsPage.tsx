@@ -268,7 +268,8 @@ function ChecklistCard({
             </>
           ) : (
             <p className="muted share-access-note">
-              Shared by {summary.ownerEmail} — {canEdit ? 'you can edit items' : 'view only'}.
+              Shared by {summary.ownerEmail} — {canEdit ? 'you can edit items' : 'you can run it but not change its items'};{' '}
+              {summary.scope === 'common' ? `you work in ${summary.ownerEmail}'s live run together.` : 'you run it on your own, with your own checks and history.'}
             </p>
           )}
 

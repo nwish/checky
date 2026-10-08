@@ -14,19 +14,26 @@ export type AdminUser = {
 export type ChecklistItem = { id: number; text: string; checked: boolean; position: number }
 export type Access = 'owner' | 'edit' | 'view'
 export type SharePermission = 'view' | 'edit'
+/** shared: the recipient runs the list with their own checks. collaborative: they join the owner's one live run. */
+export type ShareMode = 'shared' | 'collaborative'
+/** Whose checks you see: the common run (owner and collaborators) or your own. */
+export type Scope = 'common' | 'personal'
+/** Identifies this browser tab so the server doesn't echo our own edits back over the live socket. */
+export const clientId = Math.random().toString(36).slice(2)
 export type ChecklistSummary = {
   id: number
   title: string
   icon: string | null
   updatedAt: string
   access: Access
+  scope: Scope
   ownerEmail: string
   itemCount: number
   checkedCount: number
 }
-export type Checklist = { id: number; title: string; icon: string | null; updatedAt: string; access: Access; ownerEmail: string; items: ChecklistItem[] }
+export type Checklist = { id: number; title: string; icon: string | null; updatedAt: string; access: Access; scope: Scope; ownerEmail: string; items: ChecklistItem[] }
 /** A share the current user has granted. checklistId null means "all my lists". */
-export type Share = { id: number; email: string; permission: SharePermission; checklistId: number | null }
+export type Share = { id: number; email: string; permission: SharePermission; mode: ShareMode; checklistId: number | null }
 
 export type HistoryRun = {
   id: number
@@ -51,7 +58,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     credentials: 'same-origin',
     ...init,
-    headers: { 'content-type': 'application/json', ...init?.headers }
+    headers: { 'content-type': 'application/json', 'x-client-id': clientId, ...init?.headers }
   })
   let body: unknown = null
   try {
@@ -107,8 +114,8 @@ export const api = {
     ),
 
   shares: () => request<{ shares: Share[] }>('/api/shares'),
-  putShare: (email: string, permission: SharePermission, checklistId: number | null) =>
-    request<Share>('/api/shares', json('PUT', '/api/shares', { email, permission, checklistId })),
+  putShare: (email: string, permission: SharePermission, mode: ShareMode, checklistId: number | null) =>
+    request<Share>('/api/shares', json('PUT', '/api/shares', { email, permission, mode, checklistId })),
   deleteShare: (id: number) => request<{ ok: boolean }>(`/api/shares/${id}`, { method: 'DELETE' }),
 
   history: (checklistId: number | null) => request<History>(checklistId === null ? '/api/history' : `/api/history?checklistId=${checklistId}`)

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { api, type Share, type SharePermission } from './api'
+import { api, type Share, type SharePermission, type ShareMode } from './api'
 
 /**
  * Manages shares for one scope: a single checklist, or (checklistId null) all of the
@@ -16,6 +16,7 @@ export default function SharePanel({
 }) {
   const [email, setEmail] = useState('')
   const [permission, setPermission] = useState<SharePermission>('view')
+  const [mode, setMode] = useState<ShareMode>('shared')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -42,7 +43,7 @@ export default function SharePanel({
     e.preventDefault()
     const target = email.trim()
     if (!target) return
-    if (await run(() => api.putShare(target, permission, checklistId))) setEmail('')
+    if (await run(() => api.putShare(target, permission, mode, checklistId))) setEmail('')
   }
 
   return (
@@ -57,11 +58,20 @@ export default function SharePanel({
               <select
                 value={s.permission}
                 disabled={busy}
-                onChange={(e) => run(() => api.putShare(s.email, e.target.value as SharePermission, checklistId))}
-                aria-label={`Access for ${s.email}`}
+                onChange={(e) => run(() => api.putShare(s.email, e.target.value as SharePermission, s.mode, checklistId))}
+                aria-label={`Item access for ${s.email}`}
               >
-                <option value="view">Can view</option>
-                <option value="edit">Can edit</option>
+                <option value="view">View items</option>
+                <option value="edit">Edit items</option>
+              </select>
+              <select
+                value={s.mode}
+                disabled={busy}
+                onChange={(e) => run(() => api.putShare(s.email, s.permission, e.target.value as ShareMode, checklistId))}
+                aria-label={`Run mode for ${s.email}`}
+              >
+                <option value="shared">Shared</option>
+                <option value="collaborative">Collaborative</option>
               </select>
               <button type="button" className="ghost" disabled={busy} onClick={() => run(() => api.deleteShare(s.id))} aria-label={`Stop sharing with ${s.email}`}>
                 Remove
@@ -73,7 +83,7 @@ export default function SharePanel({
 
       {inherited.length > 0 && (
         <p className="muted share-empty">
-          Also visible to {inherited.map((s) => `${s.email} (${s.permission})`).join(', ')} through “Share all lists”.
+          Also visible to {inherited.map((s) => `${s.email} (${s.mode})`).join(', ')} through “Share all lists”.
         </p>
       )}
 
@@ -87,12 +97,19 @@ export default function SharePanel({
           required
           aria-label="Email to share with"
         />
-        <select value={permission} onChange={(e) => setPermission(e.target.value as SharePermission)} aria-label="Access level">
-          <option value="view">Can view</option>
-          <option value="edit">Can edit</option>
+        <select value={permission} onChange={(e) => setPermission(e.target.value as SharePermission)} aria-label="Item access">
+          <option value="view">View items</option>
+          <option value="edit">Edit items</option>
+        </select>
+        <select value={mode} onChange={(e) => setMode(e.target.value as ShareMode)} aria-label="Run mode">
+          <option value="shared">Shared</option>
+          <option value="collaborative">Collaborative</option>
         </select>
         <button type="submit" disabled={busy}>Share</button>
       </form>
+      <p className="muted share-legend">
+        <strong>Shared:</strong> they run the list with their own checks and history. <strong>Collaborative:</strong> you work in the same live run. “View items” can still check items and reset; “Edit items” can also change the list.
+      </p>
       {error && <p className="error">{error}</p>}
     </div>
   )
