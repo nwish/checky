@@ -66,6 +66,7 @@ npm start        # serves UI and API on http://127.0.0.1:3001
 | `SMTP_PASS` | —        | SMTP auth password |
 | `SMTP_FROM` | `Rerun <rerun@localhost>` | From address for emails |
 | `APP_URL`   | request origin | Base URL used in invitation links when the email is sent |
+| `TRUST_PROXY` | — | Set when running behind a reverse proxy so rate limits see real client addresses: a hop count (`1` for one proxy) or a name/CIDR list (`loopback,172.16.0.0/12`). Leave unset when clients connect directly — trusting the header with no proxy in front lets anyone forge their address |
 
 The server reads a `.env` file from the repo root when present — create it from `.env.example`. Values in a real environment always take precedence over the file.
 
@@ -79,7 +80,7 @@ docker compose up -d --build    # or build from source
 - App: http://localhost:3001 (UI + API in one container)
 - SQLite persists in the `rerun-data` named volume (`/app/data`). The container starts as root only to make that volume writable, then runs the app as the unprivileged `node` user (so a volume or bind mount left over from an older root-run image still works).
 - Healthcheck: `GET /api/health`
-- Environment (HTTPS, APP_URL, SMTP_*) goes in the `environment:` block of `docker-compose.yml`; the image has no `.env` file. Behind a TLS reverse proxy set `HTTPS=1`, and make sure the proxy passes WebSocket upgrades for `/api/*` (live collaborative runs).
+- Environment (HTTPS, APP_URL, TRUST_PROXY, SMTP_*) goes in the `environment:` block of `docker-compose.yml`; the image has no `.env` file. Behind a TLS reverse proxy set `HTTPS=1` and `TRUST_PROXY=1` (otherwise the logs show an `X-Forwarded-For … trust proxy` validation error and all users share one rate-limit bucket), and make sure the proxy passes WebSocket upgrades for `/api/*` (live collaborative runs).
 - First account: same as above — register via the UI (it becomes the admin)
   - Invitation emails need the `SMTP_*` env vars (see Configuration); without them the email is logged to the container's console
 - The image is built for `linux/amd64` only.
@@ -124,8 +125,8 @@ docker compose up -d --build    # or build from source
 - Sessions: 256-bit random token; only its SHA-256 hash is stored (with 30-day expiry); token delivered in an `HttpOnly`, `SameSite=Lax` cookie (`rerun_session`).
 - Login never reveals whether an email exists, and unknown-email logins burn a dummy hash so timing stays uniform. (While registration is open, the sign-up form necessarily reveals whether an email already has an account.)
 - Invite links: 256-bit single-use token; only its SHA-256 hash is stored; consumed on activation or rotated on resend.
-- Rate limiting (in-memory, per IP+email): 5 logins / 5 min, 10 registrations / 15 min, 10 invites / 15 min, 5 activations per link / 5 min. The app doesn't set Express's `trust proxy`, so behind a reverse proxy every client shares the proxy's address and these limits apply to all users together.
-- Signed-in API traffic (checklists, shares, history, `/api/auth/me`) is limited to 300 requests per minute **per session** (not per IP, so it isn't affected by the proxy caveat above); normal use stays far below this.
+- Rate limiting (in-memory, per IP+email): 5 logins / 5 min, 10 registrations / 15 min, 10 invites / 15 min, 5 activations per link / 5 min. Behind a reverse proxy, set `TRUST_PROXY` (see Configuration); without it every client appears to have the proxy's address and these limits apply to all users together.
+- Signed-in API traffic (checklists, shares, history, `/api/auth/me`) is limited to 300 requests per minute **per session** (not per IP, so it works the same with or without `TRUST_PROXY`); normal use stays far below this.
 - JSON body limit 16 KB; malformed bodies get a generic 400.
 
 ## Data & reset

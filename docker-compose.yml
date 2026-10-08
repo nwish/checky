@@ -12,6 +12,8 @@ services:
     # environment:
     #   # Behind TLS (reverse proxy): session cookies get the Secure flag
     #   - HTTPS=1
+    #   # Behind a reverse proxy: rate limits use the real client address, not the proxy's
+    #   - TRUST_PROXY=1
     #   # Public origin used in invitation links
     #   - APP_URL=https://rerun.example.com
     #   # Invitation email (without SMTP_HOST, invite links are logged instead)
