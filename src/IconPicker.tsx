@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { CHECKLIST_ICON_NAMES, CHECKLIST_ICONS, checklistIcon, DEFAULT_CHECKLIST_ICON } from './icons'
 
 /** The grid of icon choices. */
@@ -62,28 +63,33 @@ export default function IconPicker({ value, onChange }: { value: string | null; 
       >
         <Icon />
       </button>
-      {open && (
-        <div className="icon-modal-backdrop" onClick={() => setOpen(false)}>
-          <div className="icon-modal" role="dialog" aria-modal="true" aria-labelledby="icon-modal-title" onClick={(e) => e.stopPropagation()}>
-            <div className="icon-modal-header">
-              <h2 id="icon-modal-title">Choose an icon</h2>
-              <button ref={closeButtonRef} type="button" className="icon-modal-close" onClick={() => setOpen(false)} aria-label="Close">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                </svg>
-              </button>
+      {open &&
+        createPortal(
+          // Portaled to <body>: the picker sits inside a <label>, and a tap on any non-button part of a
+          // label-descendant modal (backdrop, padding, title) is forwarded to the label's first control —
+          // the trigger — which reopened the modal right after it closed.
+          <div className="icon-modal-backdrop" onClick={() => setOpen(false)}>
+            <div className="icon-modal" role="dialog" aria-modal="true" aria-labelledby="icon-modal-title" onClick={(e) => e.stopPropagation()}>
+              <div className="icon-modal-header">
+                <h2 id="icon-modal-title">Choose an icon</h2>
+                <button ref={closeButtonRef} type="button" className="icon-modal-close" onClick={() => setOpen(false)} aria-label="Close">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                  </svg>
+                </button>
+              </div>
+              <IconGrid
+                value={value}
+                onChange={(icon) => {
+                  onChange(icon)
+                  setOpen(false)
+                }}
+              />
             </div>
-            <IconGrid
-              value={value}
-              onChange={(icon) => {
-                onChange(icon)
-                setOpen(false)
-              }}
-            />
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   )
 }

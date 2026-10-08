@@ -1621,6 +1621,8 @@ select:focus {
   justify-content: center;
   padding: 24px;
   background: rgba(10, 11, 14, 0.7);
+  /* iOS Safari doesn't dispatch taps on non-interactive elements to React's root listener without this */
+  cursor: pointer;
 }
 
 .icon-modal {
@@ -1633,6 +1635,7 @@ select:focus {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-panel);
   padding: 20px;
+  cursor: auto;
 }
 
 .icon-modal-header {
