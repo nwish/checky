@@ -136,6 +136,15 @@ const spaFallbackLimiter = rateLimit({
 
 const app = express()
 app.disable('x-powered-by')
+
+// Behind a reverse proxy, set TRUST_PROXY so req.ip (what the rate limits key on) is the real
+// client and not the proxy: a hop count ("1" for one proxy), or a name/CIDR list ("loopback,
+// 172.16.0.0/12"). Off by default, because trusting X-Forwarded-For with no proxy in front
+// would let any client forge its address and dodge the limits.
+const trustProxy = process.env.TRUST_PROXY?.trim()
+if (trustProxy && trustProxy !== 'false') {
+  app.set('trust proxy', /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy === 'true' ? true : trustProxy)
+}
 app.use(express.json({ limit: '16kb' }))
 app.use('/api/checklists', checklistsRouter)
 app.use('/api/shares', sharesRouter)
