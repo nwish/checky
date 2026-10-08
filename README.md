@@ -74,15 +74,17 @@ The server reads a `.env` file from the repo root when present — create it fro
 ## Deployment (Docker)
 
 ```bash
-docker compose up -d --build
+docker compose up -d            # pulls ghcr.io/nwish/rerun:latest
+docker compose up -d --build    # or build from source
 ```
 
 - App: http://localhost:3001 (UI + API in one container)
-- SQLite persists in the `rerun-data` named volume (`/app/data`)
+- SQLite persists in the `rerun-data` named volume (`/app/data`). The container starts as root only to make that volume writable, then runs the app as the unprivileged `node` user (so a volume or bind mount left over from an older root-run image still works).
 - Healthcheck: `GET /api/health`
-- Behind a TLS reverse proxy: uncomment the `HTTPS=1` env in `docker-compose.yml`
+- Environment (HTTPS, APP_URL, SMTP_*) goes in the `environment:` block of `docker-compose.yml`; the image has no `.env` file. Behind a TLS reverse proxy set `HTTPS=1`, and make sure the proxy passes WebSocket upgrades for `/api/*` (live collaborative runs).
 - First account: same as above — register via the UI (it becomes the admin)
   - Invitation emails need the `SMTP_*` env vars (see Configuration); without them the email is logged to the container's console
+- The image is built for `linux/amd64` only.
 
 ## Accounts & invitations
 
