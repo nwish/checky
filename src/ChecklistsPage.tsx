@@ -103,14 +103,6 @@ export default function ChecklistsPage() {
         </form>
       </section>
 
-      <section className="card checklist-new-card checklist-section-gap">
-        <h2>Share all lists</h2>
-        <p className="muted">
-          People added here can see every list you have, including ones you create later. A list's own sharing settings override this for that list.
-        </p>
-        <SharePanel checklistId={null} shares={shares} onChanged={refresh} />
-      </section>
-
       {checklists === null ? (
         <p className="muted checklist-section-gap">Loading…</p>
       ) : checklists.length === 0 ? (
