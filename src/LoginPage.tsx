@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from './api'
 
 export default function LoginPage({ onAuthed }: { onAuthed: () => void }) {
@@ -7,7 +7,11 @@ export default function LoginPage({ onAuthed }: { onAuthed: () => void }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [config, setConfig] = useState<{ canRegister: boolean; firstAccount: boolean } | null>(null)
 
+  useEffect(() => {
+    api.authConfig().then(setConfig).catch(() => setConfig(null))
+  }, [])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -27,8 +31,8 @@ export default function LoginPage({ onAuthed }: { onAuthed: () => void }) {
   return (
     <main className="center">
       <div className="card">
-        <h2>{mode === 'login' ? 'Sign in' : 'Create the first account'}</h2>
-        {mode === 'register' && (
+        <h2>{mode === 'login' ? 'Sign in' : config?.firstAccount ? 'Create the first account' : 'Create an account'}</h2>
+        {mode === 'register' && config?.firstAccount && (
           <p className="muted">The first account registered here becomes the admin. After that, registration closes and new users come by invitation.</p>
         )}
         <form onSubmit={submit} className="form">
@@ -43,9 +47,13 @@ export default function LoginPage({ onAuthed }: { onAuthed: () => void }) {
           {error && <p className="error">{error}</p>}
           <button type="submit" disabled={busy}>{busy ? 'One sec…' : mode === 'login' ? 'Sign in' : 'Create account'}</button>
         </form>
-        <button className="link" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null) }}>
-          {mode === 'login' ? 'No account yet? Create the first one' : 'Already have one? Sign in'}
-        </button>
+        {config?.canRegister ? (
+          <button className="link" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null) }}>
+            {mode === 'login' ? (config.firstAccount ? 'No account yet? Create the first one' : 'No account yet? Create one') : 'Already have one? Sign in'}
+          </button>
+        ) : (
+          config && <p className="muted">New accounts are by invitation — ask an administrator.</p>
+        )}
       </div>
     </main>
   )

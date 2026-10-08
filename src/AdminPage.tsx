@@ -8,14 +8,28 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false)
   const [resending, setResending] = useState<string | null>(null)
   const [users, setUsers] = useState<AdminUser[] | null>(null)
+  const [registrationOpen, setRegistrationOpen] = useState<boolean | null>(null)
+  const [settingError, setSettingError] = useState<string | null>(null)
 
   useEffect(() => {
     api.users().then((r) => setUsers(r.users)).catch(() => setUsers([]))
+    api.adminSettings().then((s) => setRegistrationOpen(s.registrationOpen)).catch(() => setSettingError('Could not load settings'))
   }, [])
 
   async function refresh() {
     const r = await api.users()
     setUsers(r.users)
+  }
+
+  async function toggleRegistration() {
+    if (registrationOpen === null) return
+    setSettingError(null)
+    try {
+      const s = await api.setRegistrationOpen(!registrationOpen)
+      setRegistrationOpen(s.registrationOpen)
+    } catch (err) {
+      setSettingError((err as Error).message)
+    }
   }
 
   async function invite(e: React.FormEvent) {
@@ -71,19 +85,34 @@ export default function AdminPage() {
       </div>
 
       <div className="panel-grid">
-        <section className="card">
-          <h2>Invite a user</h2>
-          <p className="muted">They get an email with a single-use link to set their own password.</p>
-          <form onSubmit={invite} className="form">
-            <label>
-              Email
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="teammate@example.com" />
-            </label>
-            {error && <p className="error">{error}</p>}
-            {feedback && <p className="ok">{feedback}</p>}
-            <button type="submit" disabled={busy}>{busy ? 'Inviting…' : 'Send invite'}</button>
-          </form>
-        </section>
+        <div className="admin-side">
+          <section className="card">
+            <h2>Invite a user</h2>
+            <p className="muted">They get an email with a single-use link to set their own password.</p>
+            <form onSubmit={invite} className="form">
+              <label>
+                Email
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="teammate@example.com" />
+              </label>
+              {error && <p className="error">{error}</p>}
+              {feedback && <p className="ok">{feedback}</p>}
+              <button type="submit" disabled={busy}>{busy ? 'Inviting…' : 'Send invite'}</button>
+            </form>
+          </section>
+
+          <section className="card">
+            <h2>Registration</h2>
+            <p className="muted">
+              {registrationOpen
+                ? 'Open: anyone who can reach this page can create an account without an invitation. New accounts get the user role.'
+                : 'Closed: new people join only by invitation.'}
+            </p>
+            {settingError && <p className="error">{settingError}</p>}
+            <button type="button" className="ghost" onClick={toggleRegistration} disabled={registrationOpen === null}>
+              {registrationOpen ? 'Close registration' : 'Open registration'}
+            </button>
+          </section>
+        </div>
 
         <section className="card">
           <h2>Users</h2>

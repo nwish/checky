@@ -721,6 +721,12 @@ button.link:active {
   min-width: 0;
 }
 
+.admin-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 @media (max-width: 900px) {
   .panel-grid {
     grid-template-columns: 1fr;

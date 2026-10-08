@@ -89,6 +89,10 @@ export const api = {
   activate: (token: string, password: string) => request<Me>('/api/auth/activate', json('POST', '/api/auth/activate', { token, password })),
   invite: (email: string) => request<{ email: string; resent: boolean; mail: string }>('/api/admin/invites', json('POST', '/api/admin/invites', { email })),
   users: () => request<{ users: AdminUser[] }>('/api/admin/users'),
+  authConfig: () => request<{ canRegister: boolean; firstAccount: boolean }>('/api/auth/config'),
+  adminSettings: () => request<{ registrationOpen: boolean }>('/api/admin/settings'),
+  setRegistrationOpen: (registrationOpen: boolean) =>
+    request<{ registrationOpen: boolean }>('/api/admin/settings', json('PUT', '/api/admin/settings', { registrationOpen })),
 
   checklists: () => request<{ checklists: ChecklistSummary[] }>('/api/checklists'),
   createChecklist: (title: string, icon: string | null) =>
