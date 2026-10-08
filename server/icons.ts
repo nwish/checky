@@ -2,13 +2,13 @@
 // free text: keeps the pickers sane and rejects anything unknown. Used for checklist icons
 // and user avatars.
 const ICONS = [
-  'Waves', 'Sailboat', 'Anchor', 'Fish', 'Droplet',
+  'Waves', 'Sailboat', 'Kayak', 'Anchor', 'Fish', 'Droplet',
   'Tent', 'Mountain', 'Trees', 'Palmtree', 'Compass', 'Backpack', 'Snowflake', 'Sun', 'Flame',
   'Dumbbell', 'Bike',
   'Car', 'Plane', 'Luggage',
   'Home', 'Wrench', 'Hammer', 'Tractor', 'PaintRoller', 'Scissors', 'Package', 'ShoppingCart',
   'UtensilsCrossed', 'Coffee', 'Wine',
-  'Briefcase', 'Book', 'Music', 'Camera', 'Baby', 'Dog', 'Heart', 'Stethoscope', 'Sparkles', 'Shirt',
+  'Briefcase', 'Book', 'Music', 'Camera', 'Baby', 'Dog', 'PawPrint', 'Heart', 'Stethoscope', 'Sparkles', 'Shirt',
   'ListChecks'
 ]
 
