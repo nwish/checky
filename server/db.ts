@@ -65,6 +65,9 @@ db.exec(`
     grantee_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     checklist_id INTEGER REFERENCES checklists(id) ON DELETE CASCADE,
     permission TEXT NOT NULL CHECK (permission IN ('view', 'edit')),
+    -- 'shared': the grantee runs the list with their own checks. 'collaborative': the
+    -- grantee joins the owner's single live run (checks on checklist_items are common).
+    mode TEXT NOT NULL DEFAULT 'collaborative' CHECK (mode IN ('shared', 'collaborative')),
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     CHECK (owner_id <> grantee_id)
   );
@@ -83,7 +86,24 @@ db.exec(`
     started_at TEXT,
     completed_at TEXT NOT NULL DEFAULT (datetime('now')),
     total_items INTEGER NOT NULL,
-    checked_items INTEGER NOT NULL
+    checked_items INTEGER NOT NULL,
+    -- 1 for a run done on a user's own checks (shared mode); only that user sees it.
+    personal INTEGER NOT NULL DEFAULT 0
+  );
+
+  -- A user's own checks on a list shared in 'shared' mode. Presence of a row = checked.
+  CREATE TABLE IF NOT EXISTS item_checks (
+    item_id INTEGER NOT NULL REFERENCES checklist_items(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY (item_id, user_id)
+  );
+
+  -- Start time of a user's current personal run, for duration (cf. checklists.run_started_at).
+  CREATE TABLE IF NOT EXISTS personal_run_starts (
+    checklist_id INTEGER NOT NULL REFERENCES checklists(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    started_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (checklist_id, user_id)
   );
 
   CREATE TABLE IF NOT EXISTS checklist_run_items (
@@ -118,4 +138,15 @@ if (!checklistColumns.some((c) => c.name === 'icon')) {
 // checked after a reset, so a run's duration can be measured.
 if (!checklistColumns.some((c) => c.name === 'run_started_at')) {
   db.exec('ALTER TABLE checklists ADD COLUMN run_started_at TEXT')
+}
+
+// Migrate shares and runs created before shared/collaborative modes. Existing shares keep
+// their old behavior, where everyone sees the same checks, i.e. collaborative.
+const shareColumns = db.prepare('PRAGMA table_info(checklist_shares)').all() as Array<{ name: string }>
+if (!shareColumns.some((c) => c.name === 'mode')) {
+  db.exec(`ALTER TABLE checklist_shares ADD COLUMN mode TEXT NOT NULL DEFAULT 'collaborative' CHECK (mode IN ('shared', 'collaborative'))`)
+}
+const runColumns = db.prepare('PRAGMA table_info(checklist_runs)').all() as Array<{ name: string }>
+if (!runColumns.some((c) => c.name === 'personal')) {
+  db.exec('ALTER TABLE checklist_runs ADD COLUMN personal INTEGER NOT NULL DEFAULT 0')
 }

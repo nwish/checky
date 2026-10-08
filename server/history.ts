@@ -7,13 +7,18 @@ const RECENT_RUNS = 50
 const TOP_MISSED = 10
 const DAY_MS = 24 * 60 * 60 * 1000
 
-// Runs on lists the user owns or that are shared with them (list-specific share or all-lists share).
-const VISIBLE_RUNS = `
-  FROM checklist_runs r
+// Joins that resolve whether the user can see a run's list: they own it, or have a
+// list-specific or all-lists share.
+const RUN_JOINS = `
   JOIN checklists c ON c.id = r.checklist_id
   LEFT JOIN checklist_shares per ON per.grantee_id = @me AND per.checklist_id = c.id
-  LEFT JOIN checklist_shares al ON al.grantee_id = @me AND al.owner_id = c.user_id AND al.checklist_id IS NULL
- WHERE (c.user_id = @me OR per.id IS NOT NULL OR al.id IS NOT NULL)`
+  LEFT JOIN checklist_shares al ON al.grantee_id = @me AND al.owner_id = c.user_id AND al.checklist_id IS NULL`
+// Common runs on lists the user takes part in (owns, or collaborates on), plus the user's own
+// personal runs (shared mode). A shared-mode user isn't in the common run, so doesn't see it.
+const RUN_VISIBLE = `((r.personal = 0 AND (c.user_id = @me OR COALESCE(per.mode, al.mode) = 'collaborative')) OR (r.personal = 1 AND r.user_id = @me))`
+const VISIBLE_RUNS = `
+  FROM checklist_runs r ${RUN_JOINS}
+ WHERE ${RUN_VISIBLE}`
 const LIST_FILTER = ` AND (@list IS NULL OR c.id = @list)`
 const DURATION = `(julianday(r.completed_at) - julianday(r.started_at)) * 86400.0`
 
@@ -36,11 +41,8 @@ const statements = {
     `SELECT c.id AS checklist_id, c.title AS list_title, ri.text,
             SUM(ri.checked = 0) AS missed, COUNT(*) AS appeared
        FROM checklist_run_items ri
-       JOIN checklist_runs r ON r.id = ri.run_id
-       JOIN checklists c ON c.id = r.checklist_id
-       LEFT JOIN checklist_shares per ON per.grantee_id = @me AND per.checklist_id = c.id
-       LEFT JOIN checklist_shares al ON al.grantee_id = @me AND al.owner_id = c.user_id AND al.checklist_id IS NULL
-      WHERE (c.user_id = @me OR per.id IS NOT NULL OR al.id IS NOT NULL)${LIST_FILTER}
+       JOIN checklist_runs r ON r.id = ri.run_id ${RUN_JOINS}
+      WHERE ${RUN_VISIBLE}${LIST_FILTER}
       GROUP BY c.id, ri.text
      HAVING missed > 0
       ORDER BY missed DESC, appeared DESC, ri.text
@@ -49,7 +51,9 @@ const statements = {
   recent: db.prepare(
     `SELECT r.id, r.checklist_id, r.title, u.email AS by_email, r.completed_at, r.total_items, r.checked_items,
             ${DURATION} AS duration
-     ${VISIBLE_RUNS.replace('WHERE', 'LEFT JOIN users u ON u.id = r.user_id WHERE')}${LIST_FILTER}
+     FROM checklist_runs r ${RUN_JOINS}
+     LEFT JOIN users u ON u.id = r.user_id
+    WHERE ${RUN_VISIBLE}${LIST_FILTER}
       ORDER BY r.completed_at DESC, r.id DESC
       LIMIT ${RECENT_RUNS}`
   ),

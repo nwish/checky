@@ -1,11 +1,12 @@
 import { Router, type Response } from 'express'
+import { ACCESS_RANK, resolveAccess, type Access, type Scope } from './access.js'
 import { db } from './db.js'
 import { requireAuth, type AuthedRequest } from './middleware.js'
 
-type Access = 'owner' | 'edit' | 'view'
 type ChecklistRow = { id: number; user_id: number; title: string; icon: string | null; created_at: string; updated_at: string; owner_email: string }
+type LoadedChecklist = ChecklistRow & { access: Access; scope: Scope }
 type ItemRow = { id: number; checklist_id: number; text: string; checked: number; position: number }
-type ListRow = { id: number; title: string; icon: string | null; updated_at: string; owner_email: string; access: Access; item_count: number; checked_count: number }
+type ListRow = { id: number; title: string; icon: string | null; updated_at: string; owner_email: string; access: Access; scope: Scope; item_count: number; checked_count: number }
 
 // Kept in sync with src/icons.ts's CHECKLIST_ICONS list. A fixed, curated set
 // rather than free text: keeps the picker sane and rejects anything unknown.
@@ -26,22 +27,18 @@ const statements = {
   listChecklists: db.prepare(
     `SELECT c.id, c.title, c.icon, c.updated_at, u.email AS owner_email,
             CASE WHEN c.user_id = @me THEN 'owner' ELSE COALESCE(per.permission, al.permission) END AS access,
+            CASE WHEN c.user_id <> @me AND COALESCE(per.mode, al.mode) = 'shared' THEN 'personal' ELSE 'common' END AS scope,
             COUNT(ci.id) AS item_count,
-            COALESCE(SUM(ci.checked), 0) AS checked_count
+            COALESCE(SUM(CASE WHEN c.user_id <> @me AND COALESCE(per.mode, al.mode) = 'shared' THEN ic.item_id IS NOT NULL ELSE ci.checked END), 0) AS checked_count
        FROM checklists c
        JOIN users u ON u.id = c.user_id
        LEFT JOIN checklist_shares per ON per.grantee_id = @me AND per.checklist_id = c.id
        LEFT JOIN checklist_shares al ON al.grantee_id = @me AND al.owner_id = c.user_id AND al.checklist_id IS NULL
        LEFT JOIN checklist_items ci ON ci.checklist_id = c.id
+       LEFT JOIN item_checks ic ON ic.item_id = ci.id AND ic.user_id = @me
       WHERE c.user_id = @me OR per.id IS NOT NULL OR al.id IS NOT NULL
       GROUP BY c.id
       ORDER BY c.updated_at DESC, c.id DESC`
-  ),
-  sharedAccess: db.prepare(
-    `SELECT COALESCE(
-              (SELECT permission FROM checklist_shares WHERE grantee_id = @me AND checklist_id = @id),
-              (SELECT permission FROM checklist_shares WHERE grantee_id = @me AND owner_id = @owner AND checklist_id IS NULL)
-            ) AS permission`
   ),
   findChecklist: db.prepare(
     `SELECT c.id, c.user_id, c.title, c.icon, c.created_at, c.updated_at, u.email AS owner_email
@@ -67,8 +64,8 @@ const statements = {
   getRunStarted: db.prepare('SELECT run_started_at FROM checklists WHERE id = ?'),
   clearRunStarted: db.prepare('UPDATE checklists SET run_started_at = NULL WHERE id = ?'),
   insertRun: db.prepare(
-    `INSERT INTO checklist_runs (checklist_id, user_id, title, started_at, total_items, checked_items)
-     VALUES (?, ?, ?, ?, ?, ?)`
+    `INSERT INTO checklist_runs (checklist_id, user_id, title, started_at, total_items, checked_items, personal)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
   ),
   snapshotRunItems: db.prepare(
     `INSERT INTO checklist_run_items (run_id, text, checked, position)
@@ -77,6 +74,31 @@ const statements = {
   copyItems: db.prepare(
     `INSERT INTO checklist_items (checklist_id, text, checked, position)
      SELECT ?, text, 0, position FROM checklist_items WHERE checklist_id = ?`
+  ),
+
+  // A user's own checks, for lists they run in 'shared' mode.
+  listItemsPersonal: db.prepare(
+    `SELECT ci.id, ci.checklist_id, ci.text, ci.position,
+            EXISTS(SELECT 1 FROM item_checks k WHERE k.item_id = ci.id AND k.user_id = @me) AS checked
+       FROM checklist_items ci WHERE ci.checklist_id = @id ORDER BY ci.position ASC, ci.id ASC`
+  ),
+  findItemPersonal: db.prepare(
+    `SELECT ci.id, ci.checklist_id, ci.text, ci.position,
+            EXISTS(SELECT 1 FROM item_checks k WHERE k.item_id = ci.id AND k.user_id = @me) AS checked
+       FROM checklist_items ci WHERE ci.id = @id`
+  ),
+  setPersonalCheck: db.prepare('INSERT OR IGNORE INTO item_checks (item_id, user_id) VALUES (?, ?)'),
+  clearPersonalCheck: db.prepare('DELETE FROM item_checks WHERE item_id = ? AND user_id = ?'),
+  resetPersonalChecks: db.prepare(
+    'DELETE FROM item_checks WHERE user_id = ? AND item_id IN (SELECT id FROM checklist_items WHERE checklist_id = ?)'
+  ),
+  markPersonalStarted: db.prepare('INSERT OR IGNORE INTO personal_run_starts (checklist_id, user_id) VALUES (?, ?)'),
+  getPersonalStarted: db.prepare('SELECT started_at FROM personal_run_starts WHERE checklist_id = ? AND user_id = ?'),
+  clearPersonalStarted: db.prepare('DELETE FROM personal_run_starts WHERE checklist_id = ? AND user_id = ?'),
+  snapshotPersonalRunItems: db.prepare(
+    `INSERT INTO checklist_run_items (run_id, text, checked, position)
+     SELECT @run, ci.text, EXISTS(SELECT 1 FROM item_checks k WHERE k.item_id = ci.id AND k.user_id = @me), ci.position
+       FROM checklist_items ci WHERE ci.checklist_id = @id`
   )
 }
 
@@ -91,37 +113,36 @@ function serializeItem(row: ItemRow) {
   return { id: row.id, text: row.text, checked: Boolean(row.checked), position: row.position }
 }
 
-const ACCESS_RANK: Record<Access, number> = { view: 1, edit: 2, owner: 3 }
-
 /**
  * Loads a checklist and verifies the current user has at least `need` access to it.
  * Sends 404 when it doesn't exist or isn't visible to the user, 403 when visible but
  * not permitted. Returns null in both cases.
  */
-function loadChecklist(req: AuthedRequest, res: Response, id: number, need: Access): (ChecklistRow & { access: Access }) | null {
-  if (!Number.isInteger(id)) {
+function loadChecklist(req: AuthedRequest, res: Response, id: number, need: Access): LoadedChecklist | null {
+  const row = Number.isInteger(id) ? (statements.findChecklist.get(id) as ChecklistRow | undefined) : undefined
+  const resolved = row ? resolveAccess(req.user.id, row.id) : null
+  if (!row || !resolved) {
     res.status(404).json({ error: 'checklist not found' })
     return null
   }
-  const row = statements.findChecklist.get(id) as ChecklistRow | undefined
-  let access: Access | null = null
-  if (row) {
-    if (row.user_id === req.user.id) {
-      access = 'owner'
-    } else {
-      const shared = statements.sharedAccess.get({ me: req.user.id, id: row.id, owner: row.user_id }) as { permission: Access | null }
-      access = shared.permission
-    }
-  }
-  if (!row || !access) {
-    res.status(404).json({ error: 'checklist not found' })
+  if (ACCESS_RANK[resolved.access] < ACCESS_RANK[need]) {
+    res.status(403).json({ error: need === 'owner' ? 'only the owner can do that' : 'you only have view access to this checklist’s items' })
     return null
   }
-  if (ACCESS_RANK[access] < ACCESS_RANK[need]) {
-    res.status(403).json({ error: need === 'owner' ? 'only the owner can do that' : 'you have view-only access to this checklist' })
-    return null
-  }
-  return { ...row, access }
+  return { ...row, access: resolved.access, scope: resolved.scope }
+}
+
+/** Items with `checked` reflecting the run the user is in: the common run or their own. */
+function itemsFor(checklist: LoadedChecklist, userId: number): ItemRow[] {
+  return (
+    checklist.scope === 'personal'
+      ? statements.listItemsPersonal.all({ me: userId, id: checklist.id })
+      : statements.listItems.all(checklist.id)
+  ) as ItemRow[]
+}
+
+function itemFor(checklist: LoadedChecklist, userId: number, itemId: number): ItemRow {
+  return (checklist.scope === 'personal' ? statements.findItemPersonal.get({ me: userId, id: itemId }) : statements.findItem.get(itemId)) as ItemRow
 }
 
 export const checklistsRouter = Router()
@@ -136,6 +157,7 @@ checklistsRouter.get('/', (req, res) => {
       icon: r.icon,
       updatedAt: r.updated_at,
       access: r.access,
+      scope: r.scope,
       ownerEmail: r.owner_email,
       itemCount: r.item_count,
       checkedCount: r.checked_count
@@ -159,19 +181,20 @@ checklistsRouter.post('/', (req, res) => {
   const info = statements.insertChecklist.run((req as unknown as AuthedRequest).user.id, title, icon)
   const id = Number(info.lastInsertRowid)
   const row = statements.findChecklist.get(id) as ChecklistRow
-  res.status(201).json({ id: row.id, title: row.title, icon: row.icon, updatedAt: row.updated_at, access: 'owner', ownerEmail: row.owner_email, items: [] })
+  res.status(201).json({ id: row.id, title: row.title, icon: row.icon, updatedAt: row.updated_at, access: 'owner', scope: 'common', ownerEmail: row.owner_email, items: [] })
 })
 
 checklistsRouter.get('/:id', (req, res) => {
   const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'view')
   if (!checklist) return
-  const items = (statements.listItems.all(checklist.id) as ItemRow[]).map(serializeItem)
+  const items = itemsFor(checklist, (req as unknown as AuthedRequest).user.id).map(serializeItem)
   res.json({
     id: checklist.id,
     title: checklist.title,
     icon: checklist.icon,
     updatedAt: checklist.updated_at,
     access: checklist.access,
+    scope: checklist.scope,
     ownerEmail: checklist.owner_email,
     items
   })
@@ -229,27 +252,37 @@ checklistsRouter.post('/:id/duplicate', (req, res) => {
   })()
   const row = statements.findChecklist.get(newId) as ChecklistRow
   const items = (statements.listItems.all(newId) as ItemRow[]).map(serializeItem)
-  res.status(201).json({ id: row.id, title: row.title, icon: row.icon, updatedAt: row.updated_at, access: 'owner', ownerEmail: row.owner_email, items })
+  res.status(201).json({ id: row.id, title: row.title, icon: row.icon, updatedAt: row.updated_at, access: 'owner', scope: 'common', ownerEmail: row.owner_email, items })
 })
 
+/** Ends the user's current run on a list: records it (if anything was checked), then clears their checks. */
 checklistsRouter.post('/:id/reset', (req, res) => {
-  const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'edit')
-  if (!checklist) return
-  // A reset ends a run: record it (if anything was checked) before the checks are cleared.
   const me = (req as unknown as AuthedRequest).user
-  const items = statements.listItems.all(checklist.id) as ItemRow[]
+  const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'view')
+  if (!checklist) return
+  const items = itemsFor(checklist, me.id)
   const checkedCount = items.filter((i) => i.checked).length
+  const personal = checklist.scope === 'personal'
   db.transaction(() => {
     if (checkedCount > 0) {
-      const { run_started_at } = statements.getRunStarted.get(checklist.id) as { run_started_at: string | null }
-      const runId = Number(statements.insertRun.run(checklist.id, me.id, checklist.title, run_started_at, items.length, checkedCount).lastInsertRowid)
-      statements.snapshotRunItems.run(runId, checklist.id)
+      const started = (personal ? statements.getPersonalStarted.get(checklist.id, me.id) : statements.getRunStarted.get(checklist.id)) as
+        | { started_at?: string | null; run_started_at?: string | null }
+        | undefined
+      const startedAt = started?.started_at ?? started?.run_started_at ?? null
+      const runId = Number(statements.insertRun.run(checklist.id, me.id, checklist.title, startedAt, items.length, checkedCount, personal ? 1 : 0).lastInsertRowid)
+      if (personal) statements.snapshotPersonalRunItems.run({ run: runId, me: me.id, id: checklist.id })
+      else statements.snapshotRunItems.run(runId, checklist.id)
     }
-    statements.resetItems.run(checklist.id)
-    statements.clearRunStarted.run(checklist.id)
-    statements.touchChecklist.run(checklist.id)
+    if (personal) {
+      statements.resetPersonalChecks.run(me.id, checklist.id)
+      statements.clearPersonalStarted.run(checklist.id, me.id)
+    } else {
+      statements.resetItems.run(checklist.id)
+      statements.clearRunStarted.run(checklist.id)
+      statements.touchChecklist.run(checklist.id)
+    }
   })()
-  res.json({ items: (statements.listItems.all(checklist.id) as ItemRow[]).map(serializeItem) })
+  res.json({ items: itemsFor(checklist, me.id).map(serializeItem) })
 })
 
 checklistsRouter.post('/:id/items', (req, res) => {
@@ -272,7 +305,9 @@ checklistsRouter.post('/:id/items', (req, res) => {
 })
 
 checklistsRouter.patch('/:id/items/:itemId', (req, res) => {
-  const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'edit')
+  const me = (req as unknown as AuthedRequest).user
+  // Checking items needs only view access; changing their text needs edit.
+  const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'view')
   if (!checklist) return
   const item = statements.findItem.get(Number(req.params.itemId)) as ItemRow | undefined
   if (!item || item.checklist_id !== checklist.id) {
@@ -280,6 +315,11 @@ checklistsRouter.patch('/:id/items/:itemId', (req, res) => {
     return
   }
   const body = req.body as Record<string, unknown>
+  const editsText = typeof body?.text === 'string'
+  if (editsText && ACCESS_RANK[checklist.access] < ACCESS_RANK.edit) {
+    res.status(403).json({ error: 'you only have view access to this checklist’s items' })
+    return
+  }
   if (typeof body?.text === 'string') {
     const text = body.text.trim()
     if (!text) {
@@ -293,12 +333,21 @@ checklistsRouter.patch('/:id/items/:itemId', (req, res) => {
     statements.updateItemText.run(text, item.id)
   }
   if (typeof body?.checked === 'boolean') {
-    statements.updateItemChecked.run(body.checked ? 1 : 0, item.id)
-    if (body.checked) statements.markRunStarted.run(checklist.id)
+    if (checklist.scope === 'personal') {
+      if (body.checked) {
+        statements.setPersonalCheck.run(item.id, me.id)
+        statements.markPersonalStarted.run(checklist.id, me.id)
+      } else {
+        statements.clearPersonalCheck.run(item.id, me.id)
+      }
+    } else {
+      statements.updateItemChecked.run(body.checked ? 1 : 0, item.id)
+      if (body.checked) statements.markRunStarted.run(checklist.id)
+    }
   }
-  statements.touchChecklist.run(checklist.id)
-  const updated = statements.findItem.get(item.id) as ItemRow
-  res.json(serializeItem(updated))
+  // Personal checks are invisible to others, so they shouldn't reorder the owner's list.
+  if (editsText || checklist.scope === 'common') statements.touchChecklist.run(checklist.id)
+  res.json(serializeItem(itemFor(checklist, me.id, item.id)))
 })
 
 checklistsRouter.delete('/:id/items/:itemId', (req, res) => {
@@ -332,13 +381,12 @@ checklistsRouter.post('/:id/items/:itemId/move', (req, res) => {
   const swapIdx = direction === 'up' ? idx - 1 : idx + 1
   if (swapIdx < 0 || swapIdx >= items.length) {
     // Already at the edge; nothing to do.
-    res.json({ items: items.map(serializeItem) })
+    res.json({ items: itemsFor(checklist, (req as unknown as AuthedRequest).user.id).map(serializeItem) })
     return
   }
   const neighbor = items[swapIdx]
   statements.updateItemPosition.run(neighbor.position, item.id)
   statements.updateItemPosition.run(item.position, neighbor.id)
   statements.touchChecklist.run(checklist.id)
-  const reordered = (statements.listItems.all(checklist.id) as ItemRow[]).map(serializeItem)
-  res.json({ items: reordered })
+  res.json({ items: itemsFor(checklist, (req as unknown as AuthedRequest).user.id).map(serializeItem) })
 })
