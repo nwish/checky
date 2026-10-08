@@ -1580,6 +1580,16 @@ select:focus {
   color: var(--legend);
 }
 
+/* Hover/tap turns the key the action color (global button:hover), so swap light text for the dark action ink. */
+.run-item:hover,
+.run-item:active,
+.run-item:hover .run-item-text,
+.run-item:active .run-item-text,
+.run-item:hover .run-item-check,
+.run-item:active .run-item-check {
+  color: var(--action-ink);
+}
+
 /* ---- Checklist icons ---- */
 
 .icon-picker {
