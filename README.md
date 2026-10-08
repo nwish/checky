@@ -92,6 +92,7 @@ docker compose up -d --build    # or build from source
 - Invited users can sign in only after activating via the link.
 - The admin panel (visible to `role: admin` only) shows members, pending invites, the invite form, and a **Registration** switch.
 - **Open registration** (admin panel, off by default): when an admin opens it, the sign-in page offers "Create one" and anyone who can reach the instance can register with an email and password — no invitation and no email verification. They get the `user` role and are signed in immediately. Closing it again doesn't affect existing accounts. An email that already has an account, or a pending invitation, can't be registered this way (`409`). Only open it on a private network, or while you're onboarding people. API: `GET /api/auth/config` (public: whether to offer sign-up), `GET`/`PUT /api/admin/settings` (`{ registrationOpen }`, admin only).
+- **Profile** (Settings page): each person can set a display name (up to 60 characters) and pick an avatar from the same icon pack used for checklists; until then they show as their email with their initials. Other people see these on shared lists, in the live run's "In this run now", in your sharing list, in History and in the admin panel. Names aren't unique or verified, so places where it matters (the sharing list, admin panel) also show the email. API: `PATCH /api/auth/me` (`{ name?, avatar? }`, `null` clears).
 
 ## Sharing
 
