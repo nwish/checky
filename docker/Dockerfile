@@ -26,7 +26,7 @@ COPY --from=build /app/dist ./dist
 
 # The entrypoint fixes ownership of the data volume, then drops root.
 RUN mkdir -p /app/data && chown node:node /app/data
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 3001

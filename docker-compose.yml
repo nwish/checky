@@ -3,7 +3,9 @@ services:
     # Published image; `docker compose up -d --build` builds from source instead.
     # Pin a release (e.g. :0.1.0, or :0.1 for the latest patch) instead of :latest for controlled upgrades.
     image: ghcr.io/nwish/rerun:latest
-    build: .
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
     ports:
       - "3001:3001"
     volumes:

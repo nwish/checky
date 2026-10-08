@@ -74,7 +74,7 @@ The server reads a `.env` file from the repo root when present — create it fro
 
 ```bash
 docker compose up -d            # pulls ghcr.io/nwish/rerun:latest
-docker compose up -d --build    # or build from source
+docker compose up -d --build    # or build from source (uses docker/Dockerfile)
 ```
 
 - App: http://localhost:3001 (UI + API in one container)
