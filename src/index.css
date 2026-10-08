@@ -276,7 +276,7 @@ button.link:active {
 .app-shell {
   display: grid;
   grid-template-columns: 260px 1fr;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto 1fr auto;
   min-height: 100vh;
 }
 
@@ -296,6 +296,39 @@ button.link:active {
   padding: 20px 16px;
   position: sticky;
   top: 0;
+}
+
+/* The tiny user key: bottom of the sidebar on desktop, bottom of the page on mobile. */
+.app-nav-foot {
+  grid-column: 1;
+  grid-row: 3;
+  padding: 0 16px 20px;
+  position: sticky;
+  bottom: 0;
+}
+
+.nav-user .nav-avatar {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--chassis);
+  border: 1px solid var(--key-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--legend);
+  font-size: 0.62rem;
+}
+
+.nav-user .email {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.74rem;
 }
 
 .nav-top-row {
@@ -514,8 +547,15 @@ button.link:active {
     display: flex;
   }
 
+  /* flex: 1 keeps the user key at the bottom of short pages; on long pages it follows the content. */
   .app-main {
-    padding: 24px 20px 40px;
+    flex: 1;
+    padding: 24px 20px 32px;
+  }
+
+  .app-nav-foot {
+    position: static;
+    padding: 0 20px 24px;
   }
 }
 

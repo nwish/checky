@@ -79,6 +79,7 @@ export default function AppShell({
   subtitle?: string
   children: ReactNode
 }) {
+  const initials = user.email.slice(0, 2).toUpperCase()
   const [menuOpen, setMenuOpen] = useState(false)
 
   const navItems: NavItem[] = [
@@ -139,6 +140,19 @@ export default function AppShell({
         </div>
         {children}
       </main>
+
+      <div className="app-nav-foot">
+        <button
+          type="button"
+          className={`nav-link nav-user${path === '/settings' ? ' active' : ''}`}
+          onClick={() => go('/settings')}
+          title="Settings"
+          aria-label={`Settings — signed in as ${user.email}`}
+        >
+          <span className="nav-avatar">{initials}</span>
+          <span className="email">{user.email}</span>
+        </button>
+      </div>
     </div>
   )
 }
