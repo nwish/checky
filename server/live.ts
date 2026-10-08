@@ -13,10 +13,19 @@ import { authenticate } from './middleware.js'
  * client -> server: { type: 'subscribe' | 'unsubscribe', checklistId }
  * server -> client: { type: 'subscribed' | 'denied' | 'left', checklistId }
  *                   { type: 'changed', checklistId, origin? }
- *                   { type: 'presence', checklistId, users: string[] }
+ *                   { type: 'presence', checklistId, users: Array<{ email, name, avatar }> }
  */
 
-type Client = { ws: WebSocket; userId: number; email: string; tokenHash: string; lists: Set<number>; alive: boolean }
+type Client = {
+  ws: WebSocket
+  userId: number
+  email: string
+  name: string | null
+  avatar: string | null
+  tokenHash: string
+  lists: Set<number>
+  alive: boolean
+}
 
 const MAX_SUBSCRIPTIONS = 20
 const HEARTBEAT_MS = 30_000
@@ -33,8 +42,22 @@ function send(client: Client, message: object) {
 
 function broadcastPresence(listId: number) {
   const subscribed = [...clients].filter((c) => c.lists.has(listId))
-  const users = [...new Set(subscribed.map((c) => c.email))].sort()
+  // One entry per person, however many tabs they have open.
+  const byEmail = new Map(subscribed.map((c) => [c.email, { email: c.email, name: c.name, avatar: c.avatar }]))
+  const users = [...byEmail.values()].sort((a, b) => a.email.localeCompare(b.email))
   for (const c of subscribed) send(c, { type: 'presence', checklistId: listId, users })
+}
+
+/** Refreshes a connected user's name and avatar and re-announces them to the runs they're in. */
+export function updateLiveProfile(userId: number, name: string | null, avatar: string | null) {
+  const affected = new Set<number>()
+  for (const c of clients) {
+    if (c.userId !== userId) continue
+    c.name = name
+    c.avatar = avatar
+    for (const listId of c.lists) affected.add(listId)
+  }
+  for (const listId of affected) broadcastPresence(listId)
 }
 
 /**
@@ -91,7 +114,16 @@ export function attachLive(server: Server) {
       return
     }
     wss.handleUpgrade(req, socket, head, (ws) => {
-      const client: Client = { ws, userId: session.user.id, email: session.user.email, tokenHash: session.tokenHash, lists: new Set(), alive: true }
+      const client: Client = {
+        ws,
+        userId: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        avatar: session.user.avatar,
+        tokenHash: session.tokenHash,
+        lists: new Set(),
+        alive: true
+      }
       clients.add(client)
       ws.on('pong', () => {
         client.alive = true

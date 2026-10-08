@@ -1,33 +1,42 @@
 import { Router, type Request, type Response } from 'express'
 import { ACCESS_RANK, resolveAccess, type Access, type Scope } from './access.js'
 import { db } from './db.js'
+import { ICON_SET } from './icons.js'
 import { apiLimiter } from './limits.js'
 import { notifyList } from './live.js'
 import { requireAuth, type AuthedRequest } from './middleware.js'
 
-type ChecklistRow = { id: number; user_id: number; title: string; icon: string | null; created_at: string; updated_at: string; owner_email: string }
+type ChecklistRow = {
+  id: number
+  user_id: number
+  title: string
+  icon: string | null
+  created_at: string
+  updated_at: string
+  owner_email: string
+  owner_name: string | null
+  owner_avatar: string | null
+}
 type LoadedChecklist = ChecklistRow & { access: Access; scope: Scope }
 type ItemRow = { id: number; checklist_id: number; text: string; checked: number; position: number }
-type ListRow = { id: number; title: string; icon: string | null; updated_at: string; owner_email: string; access: Access; scope: Scope; item_count: number; checked_count: number }
-
-// Kept in sync with src/icons.ts's CHECKLIST_ICONS list. A fixed, curated set
-// rather than free text: keeps the picker sane and rejects anything unknown.
-const CHECKLIST_ICONS = [
-  'Waves', 'Sailboat', 'Anchor', 'Fish', 'Droplet',
-  'Tent', 'Mountain', 'Trees', 'Palmtree', 'Compass', 'Backpack', 'Snowflake', 'Sun', 'Flame',
-  'Dumbbell', 'Bike',
-  'Car', 'Plane', 'Luggage',
-  'Home', 'Wrench', 'Hammer', 'Tractor', 'PaintRoller', 'Scissors', 'Package', 'ShoppingCart',
-  'UtensilsCrossed', 'Coffee', 'Wine',
-  'Briefcase', 'Book', 'Music', 'Camera', 'Baby', 'Dog', 'Heart', 'Stethoscope', 'Sparkles', 'Shirt',
-  'ListChecks'
-]
-const CHECKLIST_ICON_SET = new Set(CHECKLIST_ICONS)
+type ListRow = {
+  id: number
+  title: string
+  icon: string | null
+  updated_at: string
+  owner_email: string
+  owner_name: string | null
+  owner_avatar: string | null
+  access: Access
+  scope: Scope
+  item_count: number
+  checked_count: number
+}
 
 const statements = {
   // Own lists plus lists shared with @me. A list-specific share overrides the owner's all-lists share.
   listChecklists: db.prepare(
-    `SELECT c.id, c.title, c.icon, c.updated_at, u.email AS owner_email,
+    `SELECT c.id, c.title, c.icon, c.updated_at, u.email AS owner_email, u.display_name AS owner_name, u.avatar AS owner_avatar,
             CASE WHEN c.user_id = @me THEN 'owner' ELSE COALESCE(per.permission, al.permission) END AS access,
             CASE WHEN c.user_id <> @me AND COALESCE(per.mode, al.mode) = 'shared' THEN 'personal' ELSE 'common' END AS scope,
             COUNT(ci.id) AS item_count,
@@ -43,7 +52,7 @@ const statements = {
       ORDER BY c.updated_at DESC, c.id DESC`
   ),
   findChecklist: db.prepare(
-    `SELECT c.id, c.user_id, c.title, c.icon, c.created_at, c.updated_at, u.email AS owner_email
+    `SELECT c.id, c.user_id, c.title, c.icon, c.created_at, c.updated_at, u.email AS owner_email, u.display_name AS owner_name, u.avatar AS owner_avatar
        FROM checklists c JOIN users u ON u.id = c.user_id
       WHERE c.id = ?`
   ),
@@ -166,6 +175,8 @@ checklistsRouter.get('/', (req, res) => {
       access: r.access,
       scope: r.scope,
       ownerEmail: r.owner_email,
+      ownerName: r.owner_name,
+      ownerAvatar: r.owner_avatar,
       itemCount: r.item_count,
       checkedCount: r.checked_count
     }))
@@ -180,7 +191,7 @@ checklistsRouter.post('/', (req, res) => {
     return
   }
   const iconInput = body?.icon
-  if (iconInput !== undefined && iconInput !== null && !CHECKLIST_ICON_SET.has(asString(iconInput))) {
+  if (iconInput !== undefined && iconInput !== null && !ICON_SET.has(asString(iconInput))) {
     res.status(400).json({ error: 'unknown icon' })
     return
   }
@@ -188,7 +199,18 @@ checklistsRouter.post('/', (req, res) => {
   const info = statements.insertChecklist.run((req as unknown as AuthedRequest).user.id, title, icon)
   const id = Number(info.lastInsertRowid)
   const row = statements.findChecklist.get(id) as ChecklistRow
-  res.status(201).json({ id: row.id, title: row.title, icon: row.icon, updatedAt: row.updated_at, access: 'owner', scope: 'common', ownerEmail: row.owner_email, items: [] })
+  res.status(201).json({
+    id: row.id,
+    title: row.title,
+    icon: row.icon,
+    updatedAt: row.updated_at,
+    access: 'owner',
+    scope: 'common',
+    ownerEmail: row.owner_email,
+    ownerName: row.owner_name,
+    ownerAvatar: row.owner_avatar,
+    items: []
+  })
 })
 
 checklistsRouter.get('/:id', (req, res) => {
@@ -203,6 +225,8 @@ checklistsRouter.get('/:id', (req, res) => {
     access: checklist.access,
     scope: checklist.scope,
     ownerEmail: checklist.owner_email,
+    ownerName: checklist.owner_name,
+    ownerAvatar: checklist.owner_avatar,
     items
   })
 })
@@ -227,7 +251,7 @@ checklistsRouter.patch('/:id', (req, res) => {
 
   if ('icon' in body) {
     const iconInput = body.icon
-    if (iconInput !== null && !CHECKLIST_ICON_SET.has(asString(iconInput))) {
+    if (iconInput !== null && !ICON_SET.has(asString(iconInput))) {
       res.status(400).json({ error: 'unknown icon' })
       return
     }
@@ -261,7 +285,18 @@ checklistsRouter.post('/:id/duplicate', (req, res) => {
   })()
   const row = statements.findChecklist.get(newId) as ChecklistRow
   const items = (statements.listItems.all(newId) as ItemRow[]).map(serializeItem)
-  res.status(201).json({ id: row.id, title: row.title, icon: row.icon, updatedAt: row.updated_at, access: 'owner', scope: 'common', ownerEmail: row.owner_email, items })
+  res.status(201).json({
+    id: row.id,
+    title: row.title,
+    icon: row.icon,
+    updatedAt: row.updated_at,
+    access: 'owner',
+    scope: 'common',
+    ownerEmail: row.owner_email,
+    ownerName: row.owner_name,
+    ownerAvatar: row.owner_avatar,
+    items
+  })
 })
 
 /** Ends the user's current run on a list: records it (if anything was checked), then clears their checks. */

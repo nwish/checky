@@ -188,5 +188,15 @@ export const migrations: Migration[] = [
         CREATE INDEX idx_users_invite ON users(invite_token_hash);
       `)
     }
+  },
+  {
+    version: 3,
+    name: 'user display name and avatar',
+    up(db) {
+      db.exec(`
+        ALTER TABLE users ADD COLUMN display_name TEXT;
+        ALTER TABLE users ADD COLUMN avatar TEXT;
+      `)
+    }
   }
 ]

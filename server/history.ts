@@ -50,7 +50,7 @@ const statements = {
       LIMIT ${TOP_MISSED}`
   ),
   recent: db.prepare(
-    `SELECT r.id, r.checklist_id, r.title, u.email AS by_email, r.completed_at, r.total_items, r.checked_items,
+    `SELECT r.id, r.checklist_id, r.title, u.email AS by_email, u.display_name AS by_name, u.avatar AS by_avatar, r.completed_at, r.total_items, r.checked_items,
             ${DURATION} AS duration
      FROM checklist_runs r ${RUN_JOINS}
      LEFT JOIN users u ON u.id = r.user_id
@@ -127,6 +127,8 @@ historyRouter.get('/', (req, res) => {
     checklist_id: number
     title: string
     by_email: string | null
+    by_name: string | null
+    by_avatar: string | null
     completed_at: string
     total_items: number
     checked_items: number
@@ -136,6 +138,8 @@ historyRouter.get('/', (req, res) => {
     checklistId: r.checklist_id,
     title: r.title,
     by: r.by_email,
+    byName: r.by_name,
+    byAvatar: r.by_avatar,
     completedAt: iso(r.completed_at),
     durationSeconds: r.duration === null ? null : Math.round(r.duration),
     total: r.total_items,

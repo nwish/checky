@@ -6,11 +6,11 @@ import { db } from './db.js'
 export const COOKIE_NAME = 'rerun_session'
 
 export type Role = 'admin' | 'user'
-export type AuthedRequest = Request & { user: { id: number; email: string; role: Role } }
-type SessionRow = { user_id: number; expires_at: number; email: string; role: string }
+export type AuthedRequest = Request & { user: { id: number; email: string; role: Role; name: string | null; avatar: string | null } }
+type SessionRow = { user_id: number; expires_at: number; email: string; role: string; display_name: string | null; avatar: string | null }
 
 const findSession = db.prepare(
-  `SELECT s.user_id, s.expires_at, u.email, u.role
+  `SELECT s.user_id, s.expires_at, u.email, u.role, u.display_name, u.avatar
      FROM sessions s
      JOIN users u ON u.id = s.user_id
     WHERE s.token_hash = ?`
@@ -33,7 +33,7 @@ export function authenticate(headers: IncomingHttpHeaders): { user: AuthedReques
   const tokenHash = hashToken(token)
   const row = findSession.get(tokenHash) as SessionRow | undefined
   if (!row || row.expires_at < Date.now()) return null
-  return { user: { id: row.user_id, email: row.email, role: row.role as Role }, tokenHash }
+  return { user: { id: row.user_id, email: row.email, role: row.role as Role, name: row.display_name, avatar: row.avatar }, tokenHash }
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {

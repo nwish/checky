@@ -7,11 +7,11 @@ import { requireAuth, type AuthedRequest } from './middleware.js'
 
 type Permission = 'view' | 'edit'
 type Mode = 'shared' | 'collaborative'
-type ShareRow = { id: number; email: string; permission: Permission; mode: Mode; checklist_id: number | null }
+type ShareRow = { id: number; email: string; name: string | null; avatar: string | null; permission: Permission; mode: Mode; checklist_id: number | null }
 
 const statements = {
   listShares: db.prepare(
-    `SELECT s.id, u.email, s.permission, s.mode, s.checklist_id
+    `SELECT s.id, u.email, u.display_name AS name, u.avatar, s.permission, s.mode, s.checklist_id
        FROM checklist_shares s
        JOIN users u ON u.id = s.grantee_id
       WHERE s.owner_id = ?
@@ -26,7 +26,7 @@ const statements = {
   insertShare: db.prepare('INSERT INTO checklist_shares (owner_id, grantee_id, checklist_id, permission, mode) VALUES (?, ?, ?, ?, ?)'),
   updateShare: db.prepare('UPDATE checklist_shares SET permission = ?, mode = ? WHERE id = ?'),
   getShare: db.prepare(
-    `SELECT s.id, u.email, s.permission, s.mode, s.checklist_id
+    `SELECT s.id, u.email, u.display_name AS name, u.avatar, s.permission, s.mode, s.checklist_id
        FROM checklist_shares s JOIN users u ON u.id = s.grantee_id
       WHERE s.id = ?`
   ),
@@ -34,7 +34,7 @@ const statements = {
 }
 
 function serialize(row: ShareRow) {
-  return { id: row.id, email: row.email, permission: row.permission, mode: row.mode, checklistId: row.checklist_id }
+  return { id: row.id, email: row.email, name: row.name, avatar: row.avatar, permission: row.permission, mode: row.mode, checklistId: row.checklist_id }
 }
 
 // Unknown vs. known emails produce different errors, so keep guessing slow.

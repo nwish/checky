@@ -8,8 +8,9 @@ import { checklistsRouter } from './checklists.js'
 import { historyRouter } from './history.js'
 import { sharesRouter } from './shares.js'
 import { db } from './db.js'
-import { attachLive } from './live.js'
+import { attachLive, updateLiveProfile } from './live.js'
 import { apiLimiter } from './limits.js'
+import { ICON_SET } from './icons.js'
 import { inviteMail, sendMail, smtpConfigured } from './mail.js'
 import { isRegistrationOpen, setRegistrationOpen } from './settings.js'
 import { COOKIE_NAME, parseCookies, requireAdmin, requireAuth, type AuthedRequest, type Role } from './middleware.js'
@@ -35,8 +36,9 @@ const statements = {
   ),
   setInvite: db.prepare('UPDATE users SET invite_token_hash = ?, invited_at = ? WHERE id = ?'),
   findUserByInviteToken: db.prepare('SELECT id, email, pass_hash FROM users WHERE invite_token_hash = ?'),
+  updateProfile: db.prepare('UPDATE users SET display_name = ?, avatar = ? WHERE id = ?'),
   listUsers: db.prepare(
-    `SELECT email, role, (pass_hash IS NOT NULL) AS activated, invited_at, activated_at, created_at
+    `SELECT email, display_name, avatar, role, (pass_hash IS NOT NULL) AS activated, invited_at, activated_at, created_at
        FROM users
       ORDER BY (pass_hash IS NULL) DESC, COALESCE(invited_at, 0) DESC`
   ),
@@ -224,7 +226,49 @@ app.post('/api/auth/logout', (req, res) => {
 })
 app.get('/api/auth/me', apiLimiter, requireAuth, (req, res) => {
   const user = (req as AuthedRequest).user
-  res.json({ email: user.email, role: user.role })
+  res.json({ email: user.email, role: user.role, name: user.name, avatar: user.avatar })
+})
+
+const NAME_MAX = 60
+
+// Sets the signed-in user's display name and/or avatar (an icon from the shared pack). Either
+// may be null to clear it; omitted fields are left alone.
+app.patch('/api/auth/me', apiLimiter, requireAuth, (req, res) => {
+  const user = (req as AuthedRequest).user
+  const body = readBody(req)
+  let name = user.name
+  let avatar = user.avatar
+
+  if ('name' in body) {
+    if (body.name === null) {
+      name = null
+    } else if (typeof body.name === 'string') {
+      const cleaned = body.name.replace(/\s+/g, ' ').trim()
+      if (cleaned.length > NAME_MAX) {
+        res.status(400).json({ error: `name must be ${NAME_MAX} characters or fewer` })
+        return
+      }
+      name = cleaned || null
+    } else {
+      res.status(400).json({ error: 'name must be text' })
+      return
+    }
+  }
+
+  if ('avatar' in body) {
+    if (body.avatar === null) {
+      avatar = null
+    } else if (typeof body.avatar === 'string' && ICON_SET.has(body.avatar)) {
+      avatar = body.avatar
+    } else {
+      res.status(400).json({ error: 'unknown avatar' })
+      return
+    }
+  }
+
+  statements.updateProfile.run(name, avatar, user.id)
+  updateLiveProfile(user.id, name, avatar)
+  res.json({ email: user.email, role: user.role, name, avatar })
 })
 
 // Invited user sets their password via the single-use link.
@@ -290,6 +334,8 @@ app.post('/api/admin/invites', inviteLimiter, requireAdmin, async (req, res) => 
 app.get('/api/admin/users', adminUsersLimiter, requireAdmin, (_req, res) => {
   const users = statements.listUsers.all() as Array<{
     email: string
+    display_name: string | null
+    avatar: string | null
     role: Role
     activated: number
     invited_at: number | null
@@ -299,6 +345,8 @@ app.get('/api/admin/users', adminUsersLimiter, requireAdmin, (_req, res) => {
   res.json({
     users: users.map((u) => ({
       email: u.email,
+      name: u.display_name,
+      avatar: u.avatar,
       role: u.role,
       activated: Boolean(u.activated),
       invited_at: u.invited_at,
