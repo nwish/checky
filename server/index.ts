@@ -10,6 +10,7 @@ import { sharesRouter } from './shares.js'
 import { db } from './db.js'
 import { attachLive } from './live.js'
 import { inviteMail, sendMail, smtpConfigured } from './mail.js'
+import { isRegistrationOpen, setRegistrationOpen } from './settings.js'
 import { COOKIE_NAME, parseCookies, requireAdmin, requireAuth, type AuthedRequest, type Role } from './middleware.js'
 
 const isProd = process.env.NODE_ENV === 'production'
@@ -143,8 +144,8 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, smtp: smtpConfigured() })
 })
 
-// The first account ever created becomes the admin. After that, new accounts
-// only come from admin invitations.
+// The first account ever created becomes the admin. After that, new accounts come from
+// admin invitations, or from here when an admin has opened registration (off by default).
 app.post('/api/auth/register', registerLimiter, (req, res) => {
   const body = readBody(req)
   const email = asString(body.email).trim()
@@ -158,20 +159,28 @@ app.post('/api/auth/register', registerLimiter, (req, res) => {
     return
   }
   const { c } = statements.countUsers.get() as { c: number }
-  if (c > 0) {
+  if (c > 0 && !isRegistrationOpen()) {
     res.status(403).json({ error: 'registration is closed — ask an administrator to invite you' })
     return
   }
 
+  const role: Role = c === 0 ? 'admin' : 'user'
   let info
   try {
-    info = statements.insertUser.run(email, hashPassword(password), 'admin', null, null, Date.now())
+    info = statements.insertUser.run(email, hashPassword(password), role, null, null, Date.now())
   } catch {
-    res.status(409).json({ error: 'an account already exists' })
+    // Also hit by an address with a pending invitation, which must not be claimable here.
+    res.status(409).json({ error: 'an account with that email already exists' })
     return
   }
   startSession(res, Number(info.lastInsertRowid))
-  res.status(201).json({ email, role: 'admin' })
+  res.status(201).json({ email, role })
+})
+
+// Lets the sign-in page know whether to offer "create account".
+app.get('/api/auth/config', (_req, res) => {
+  const { c } = statements.countUsers.get() as { c: number }
+  res.json({ canRegister: c === 0 || isRegistrationOpen(), firstAccount: c === 0 })
 })
 
 app.post('/api/auth/login', loginLimiter, (req, res) => {
@@ -287,6 +296,20 @@ app.get('/api/admin/users', adminUsersLimiter, requireAdmin, (_req, res) => {
       created_at: u.created_at
     }))
   })
+})
+
+app.get('/api/admin/settings', adminUsersLimiter, requireAdmin, (_req, res) => {
+  res.json({ registrationOpen: isRegistrationOpen() })
+})
+
+app.put('/api/admin/settings', adminUsersLimiter, requireAdmin, (req, res) => {
+  const body = readBody(req)
+  if (typeof body.registrationOpen !== 'boolean') {
+    res.status(400).json({ error: 'registrationOpen must be true or false' })
+    return
+  }
+  setRegistrationOpen(body.registrationOpen)
+  res.json({ registrationOpen: body.registrationOpen })
 })
 
 if (isProd) {

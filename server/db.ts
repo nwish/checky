@@ -116,6 +116,12 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_checklist_runs_checklist ON checklist_runs(checklist_id, completed_at);
   CREATE INDEX IF NOT EXISTS idx_checklist_run_items_run ON checklist_run_items(run_id);
+
+  -- Instance-wide admin settings. A missing key means the setting's default.
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
 `)
 
 // Migrate databases created before roles/invites existed.
