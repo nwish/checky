@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, type Checklist, type ChecklistSummary } from './api'
 import { useLiveRun } from './useLive'
+import Avatar, { ownerLabel, personName } from './Avatar'
 import { checklistIcon } from './icons'
 
 const LAST_CHECKLIST_KEY = 'rerun-last-checklist'
@@ -78,7 +79,7 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
     if (activeId !== null) reloadChecklist(activeId)
   }
   const here = useLiveRun(checklist?.scope === 'common' ? activeId : null, { onChanged: refreshOpen, onLeft: refreshOpen })
-  const others = here.filter((e) => e !== email)
+  const others = here.filter((p) => p.email !== email)
 
   async function toggleItem(itemId: number, checked: boolean) {
     if (!checklist) return
@@ -130,7 +131,7 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
               <button key={s.id} type="button" className="checklist-pick-card" onClick={() => setActiveId(s.id)}>
                 <span className="checklist-card-icon"><Icon /></span>
                 <span className="checklist-card-title">{s.title}</span>
-                {s.access !== 'owner' && <span className="checklist-card-meta share-owner">from {s.ownerEmail}</span>}
+                {s.access !== 'owner' && <span className="checklist-card-meta share-owner">from {ownerLabel(s)}</span>}
                 <span className="checklist-card-meta">{s.checkedCount}/{s.itemCount}</span>
               </button>
             )
@@ -157,11 +158,17 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
             <h2>{checklist.title}</h2>
             <p className="muted">
               {done}/{total} checked
-              {checklist.access !== 'owner' && ` · from ${checklist.ownerEmail} · ${checklist.scope === 'common' ? 'live run together' : 'your own run'}`}
+              {checklist.access !== 'owner' && ` · from ${ownerLabel(checklist)} · ${checklist.scope === 'common' ? 'live run together' : 'your own run'}`}
             </p>
             {others.length > 0 && (
               <p className="muted run-presence" aria-live="polite">
-                In this run now: {others.join(', ')}
+                In this run now:{' '}
+                {others.map((p) => (
+                  <span key={p.email} className="run-presence-person" title={p.email}>
+                    <Avatar person={p} className="sm" />
+                    {personName(p)}
+                  </span>
+                ))}
               </p>
             )}
           </div>

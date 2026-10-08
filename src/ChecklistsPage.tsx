@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, type Checklist, type ChecklistSummary, type Share } from './api'
+import { ownerLabel } from './Avatar'
 import IconPicker from './IconPicker'
 import SharePanel from './SharePanel'
 import { checklistIcon, DEFAULT_CHECKLIST_ICON } from './icons'
@@ -248,7 +249,7 @@ function ChecklistCard({
       <button type="button" className={`checklist-card-header${expanded ? ' open' : ''}`} onClick={onToggle}>
         <span className="checklist-card-icon"><HeaderIcon /></span>
         <span className="checklist-card-title">{summary.title}</span>
-        {!isOwner && <span className="checklist-card-meta share-owner">from {summary.ownerEmail}</span>}
+        {!isOwner && <span className="checklist-card-meta share-owner">from {ownerLabel(summary)}</span>}
         <span className="checklist-card-meta">{summary.checkedCount}/{summary.itemCount}</span>
         <span className="checklist-card-chevron">{icons.chevron}</span>
       </button>
@@ -268,8 +269,8 @@ function ChecklistCard({
             </>
           ) : (
             <p className="muted share-access-note">
-              Shared by {summary.ownerEmail} — {canEdit ? 'you can edit items' : 'you can run it but not change its items'};{' '}
-              {summary.scope === 'common' ? `you work in ${summary.ownerEmail}'s live run together.` : 'you run it on your own, with your own checks and history.'}
+              Shared by {ownerLabel(summary)} — {canEdit ? 'you can edit items' : 'you can run it but not change its items'};{' '}
+              {summary.scope === 'common' ? `you work in ${ownerLabel(summary)}'s live run together.` : 'you run it on your own, with your own checks and history.'}
             </p>
           )}
 

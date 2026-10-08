@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, type AdminUser } from './api'
+import Avatar, { personName } from './Avatar'
 
 export default function AdminPage() {
   const [email, setEmail] = useState('')
@@ -122,17 +123,19 @@ export default function AdminPage() {
             <ul className="user-list">
               {members.map((u) => (
                 <li key={u.email} className="user-row">
-                  <div className="user-avatar">{u.email.slice(0, 2).toUpperCase()}</div>
+                  <Avatar person={u} />
                   <div className="user-meta">
-                    <span className="user-email">{u.email}</span>
-                    <span className="muted">Joined {u.activated_at ? new Date(u.activated_at).toLocaleDateString() : u.created_at.slice(0, 10)}</span>
+                    <span className="user-email">{personName(u)}</span>
+                    <span className="muted">
+                      {u.name ? `${u.email} · ` : ''}Joined {u.activated_at ? new Date(u.activated_at).toLocaleDateString() : u.created_at.slice(0, 10)}
+                    </span>
                   </div>
                   <span className={u.role === 'admin' ? 'badge badge-admin' : 'badge'}>{u.role}</span>
                 </li>
               ))}
               {pending.map((u) => (
                 <li key={u.email} className="user-row">
-                  <div className="user-avatar pending">{u.email.slice(0, 2).toUpperCase()}</div>
+                  <Avatar person={u} className="pending" />
                   <div className="user-meta">
                     <span className="user-email">{u.email}</span>
                     <span className="muted">Invited {u.invited_at ? new Date(u.invited_at).toLocaleDateString() : u.created_at.slice(0, 10)}</span>

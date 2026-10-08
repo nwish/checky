@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, type History } from './api'
+import { personName } from './Avatar'
 
 const percent = (fraction: number | null) => (fraction === null ? '\u2014' : `${Math.round(fraction * 100)}%`)
 
@@ -154,7 +155,7 @@ export default function HistoryPage() {
               <summary className="history-row">
                 <span className="history-row-title">
                   {r.title}
-                  {showWho && <span className="history-row-sub"> · {r.by ?? 'removed user'}</span>}
+                  {showWho && <span className="history-row-sub"> · {r.by === null ? 'removed user' : personName({ email: r.by, name: r.byName })}</span>}
                 </span>
                 <span className="history-row-meta">{r.checked}/{r.total}</span>
                 <span className="history-row-meta history-row-wide">{formatDuration(r.durationSeconds)}</span>

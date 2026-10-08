@@ -1,6 +1,10 @@
-import { useState, type CSSProperties } from 'react'
-import type { Me } from './api'
+import { useEffect, useState, type CSSProperties } from 'react'
+import { api, type Me } from './api'
+import Avatar from './Avatar'
+import IconPicker from './IconPicker'
 import { applyTheme, getStoredTheme, THEMES, type ThemeId } from './theme'
+
+const NAME_MAX = 60
 
 const signOutIcon = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -10,20 +14,83 @@ const signOutIcon = (
   </svg>
 )
 
-export default function SettingsPage({ user, onSignOut }: { user: Me; onSignOut: () => void }) {
+export default function SettingsPage({ user, onSignOut, onProfileChange }: { user: Me; onSignOut: () => void; onProfileChange: (me: Me) => void }) {
   const [theme, setTheme] = useState<ThemeId>(() => getStoredTheme())
+  const [nameDraft, setNameDraft] = useState(user.name ?? '')
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    setNameDraft(user.name ?? '')
+  }, [user.name])
 
   function selectTheme(id: ThemeId) {
     applyTheme(id)
     setTheme(id)
   }
 
+  async function saveProfile(patch: { name?: string | null; avatar?: string | null }) {
+    setError(null)
+    setSaved(false)
+    try {
+      onProfileChange(await api.updateProfile(patch))
+      setSaved(true)
+    } catch (err) {
+      setError((err as Error).message)
+    }
+  }
+
+  function saveName() {
+    const name = nameDraft.replace(/\s+/g, ' ').trim()
+    if (name === (user.name ?? '')) {
+      setNameDraft(user.name ?? '')
+      return
+    }
+    saveProfile({ name: name || null })
+  }
+
   return (
     <div className="settings">
       <section className="card">
+        <h2>Profile</h2>
+        <p className="muted">How you appear to people you share lists with. Without a name, they see your email.</p>
+        <div className="profile-edit">
+          <Avatar person={user} className="profile-avatar" />
+          <div className="profile-fields">
+            <label>
+              Display name
+              <input
+                value={nameDraft}
+                onChange={(e) => {
+                  setNameDraft(e.target.value)
+                  setSaved(false)
+                }}
+                onBlur={saveName}
+                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                maxLength={NAME_MAX}
+                placeholder={user.email.split('@')[0]}
+                autoComplete="name"
+              />
+            </label>
+            <div className="profile-avatar-row">
+              <span className="profile-avatar-label">Avatar</span>
+              <IconPicker value={user.avatar} onChange={(avatar) => saveProfile({ avatar })} />
+              {user.avatar && (
+                <button type="button" className="ghost" onClick={() => saveProfile({ avatar: null })}>
+                  Use my initials
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        {error && <p className="error">{error}</p>}
+        {saved && !error && <p className="ok">Saved</p>}
+      </section>
+
+      <section className="card">
         <h2>Account</h2>
         <div className="user-row">
-          <div className="user-avatar">{user.email.slice(0, 2).toUpperCase()}</div>
+          <Avatar person={user} />
           <div className="user-meta">
             <span className="user-email">{user.email}</span>
           </div>

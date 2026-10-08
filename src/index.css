@@ -307,18 +307,15 @@ button.link:active {
   bottom: 0;
 }
 
-.nav-user .nav-avatar {
-  flex-shrink: 0;
+.nav-user .user-avatar {
   width: 24px;
   height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--chassis);
-  border: 1px solid var(--key-border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--legend);
   font-size: 0.62rem;
+}
+
+.nav-user .user-avatar svg {
+  width: 14px;
+  height: 14px;
 }
 
 .nav-user .email {
@@ -769,6 +766,76 @@ button.link:active {
   border-style: dashed;
   color: var(--status);
   border-color: color-mix(in srgb, var(--status) 45%, var(--key-border-strong));
+}
+
+.user-avatar svg {
+  width: 17px;
+  height: 17px;
+}
+
+.user-avatar.sm {
+  width: 22px;
+  height: 22px;
+  font-size: 0.6rem;
+}
+
+.user-avatar.sm svg {
+  width: 13px;
+  height: 13px;
+}
+
+.user-avatar.profile-avatar {
+  width: 72px;
+  height: 72px;
+  font-size: 1.4rem;
+}
+
+.user-avatar.profile-avatar svg {
+  width: 34px;
+  height: 34px;
+}
+
+.profile-edit {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.profile-fields {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-avatar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-avatar-label {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--legend);
+}
+
+.run-presence-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 12px;
+  vertical-align: middle;
+}
+
+@media (max-width: 520px) {
+  .profile-edit {
+    flex-direction: column;
+  }
 }
 
 .user-meta {

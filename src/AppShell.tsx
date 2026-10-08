@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import type { Me } from './api'
+import Avatar, { personName } from './Avatar'
 
 const icons = {
   dashboard: (
@@ -79,7 +80,6 @@ export default function AppShell({
   subtitle?: string
   children: ReactNode
 }) {
-  const initials = user.email.slice(0, 2).toUpperCase()
   const [menuOpen, setMenuOpen] = useState(false)
 
   const navItems: NavItem[] = [
@@ -149,8 +149,8 @@ export default function AppShell({
           title="Settings"
           aria-label={`Settings — signed in as ${user.email}`}
         >
-          <span className="nav-avatar">{initials}</span>
-          <span className="email">{user.email}</span>
+          <Avatar person={user} />
+          <span className="email">{personName(user)}</span>
         </button>
       </div>
     </div>

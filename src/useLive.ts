@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { clientId } from './api'
+import { clientId, type Person } from './api'
 
 type Handlers = {
   /** Someone else changed the list, or the socket reconnected after a gap: refetch it. */
@@ -13,8 +13,8 @@ type Handlers = {
  * your own). Pass null to stay disconnected. Reconnects with backoff and asks for a refetch
  * whenever it comes back, since updates may have been missed.
  */
-export function useLiveRun(checklistId: number | null, handlers: Handlers): string[] {
-  const [users, setUsers] = useState<string[]>([])
+export function useLiveRun(checklistId: number | null, handlers: Handlers): Person[] {
+  const [users, setUsers] = useState<Person[]>([])
   const latest = useRef(handlers)
   latest.current = handlers
 
@@ -37,7 +37,7 @@ export function useLiveRun(checklistId: number | null, handlers: Handlers): stri
         connectedBefore = true
       }
       ws.onmessage = (event) => {
-        let message: { type?: string; checklistId?: number; origin?: string; users?: string[] }
+        let message: { type?: string; checklistId?: number; origin?: string; users?: Person[] }
         try {
           message = JSON.parse(String(event.data))
         } catch {

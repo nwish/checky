@@ -53,7 +53,7 @@ export default function App() {
           : '/'
 
   const titles: Record<string, { title: string; subtitle: string }> = {
-    '/': { title: 'Dashboard', subtitle: `Welcome back, ${state.user.email.split('@')[0]}.` },
+    '/': { title: 'Dashboard', subtitle: `Welcome back, ${state.user.name ?? state.user.email.split('@')[0]}.` },
     '/checklists': { title: 'Your checklists', subtitle: 'Build and customize the lists you run again and again.' },
     '/history': { title: 'History', subtitle: 'Every finished run, and the items that keep getting skipped.' },
     '/settings': { title: 'Settings', subtitle: 'Your account and how Rerun looks.' },
@@ -75,7 +75,7 @@ export default function App() {
       ) : isHistoryRoute ? (
         <HistoryPage />
       ) : isSettingsRoute ? (
-        <SettingsPage user={state.user} onSignOut={signOut} />
+        <SettingsPage user={state.user} onSignOut={signOut} onProfileChange={(user) => setState({ user, loading: false })} />
       ) : (
         <DashboardPage navigate={navigate} email={state.user.email} />
       )}

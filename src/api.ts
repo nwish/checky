@@ -1,9 +1,14 @@
 export type Role = 'admin' | 'user'
 
-export type Me = { email: string; role: Role }
+/** Someone as other people see them: their email, plus a name and avatar icon if they set them. */
+export type Person = { email: string; name: string | null; avatar: string | null }
+
+export type Me = Person & { role: Role }
 
 export type AdminUser = {
   email: string
+  name: string | null
+  avatar: string | null
   role: Role
   activated: boolean
   invited_at: number | null
@@ -28,18 +33,33 @@ export type ChecklistSummary = {
   access: Access
   scope: Scope
   ownerEmail: string
+  ownerName: string | null
+  ownerAvatar: string | null
   itemCount: number
   checkedCount: number
 }
-export type Checklist = { id: number; title: string; icon: string | null; updatedAt: string; access: Access; scope: Scope; ownerEmail: string; items: ChecklistItem[] }
+export type Checklist = {
+  id: number
+  title: string
+  icon: string | null
+  updatedAt: string
+  access: Access
+  scope: Scope
+  ownerEmail: string
+  ownerName: string | null
+  ownerAvatar: string | null
+  items: ChecklistItem[]
+}
 /** A share the current user has granted. checklistId null means "all my lists". */
-export type Share = { id: number; email: string; permission: SharePermission; mode: ShareMode; checklistId: number | null }
+export type Share = Person & { id: number; permission: SharePermission; mode: ShareMode; checklistId: number | null }
 
 export type HistoryRun = {
   id: number
   checklistId: number
   title: string
   by: string | null
+  byName: string | null
+  byAvatar: string | null
   completedAt: string
   durationSeconds: number | null
   total: number
@@ -83,6 +103,8 @@ const json = (method: string, path: string, payload: unknown): RequestInit => ({
 
 export const api = {
   me: () => request<Me>('/api/auth/me'),
+  updateProfile: (patch: { name?: string | null; avatar?: string | null }) =>
+    request<Me>('/api/auth/me', json('PATCH', '/api/auth/me', patch)),
   login: (email: string, password: string) => request<Me>('/api/auth/login', json('POST', '/api/auth/login', { email, password })),
   register: (email: string, password: string) => request<Me>('/api/auth/register', json('POST', '/api/auth/register', { email, password })),
   logout: () => request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),

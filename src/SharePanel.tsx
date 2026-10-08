@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api, type Share, type SharePermission, type ShareMode } from './api'
+import Avatar, { personName } from './Avatar'
 
 /**
  * Manages shares for one scope: a single checklist, or (checklistId null) all of the
@@ -54,7 +55,8 @@ export default function SharePanel({
         <ul className="share-list">
           {scoped.map((s) => (
             <li key={s.id} className="share-row">
-              <span className="share-email">{s.email}</span>
+              <Avatar person={s} className="sm" />
+              <span className="share-email" title={s.email}>{s.name ? `${s.name} (${s.email})` : s.email}</span>
               <select
                 value={s.permission}
                 disabled={busy}
@@ -83,7 +85,7 @@ export default function SharePanel({
 
       {inherited.length > 0 && (
         <p className="muted share-empty">
-          Also visible to {inherited.map((s) => `${s.email} (${s.mode})`).join(', ')} through “Share all lists”.
+          Also visible to {inherited.map((s) => `${personName(s)} (${s.mode})`).join(', ')} through “Share all lists”.
         </p>
       )}
 
