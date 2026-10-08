@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { migrate } from './migrate.js'
 
 // Emitted file lives in <root>/dist-server/, so one level up is the project root.
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -12,147 +13,7 @@ mkdirSync(dataDir, { recursive: true })
 export const db = new Database(join(dataDir, 'rerun.db'))
 
 db.pragma('journal_mode = WAL')
+
+// Create or upgrade the schema before anything else touches the database.
+migrate(db, dataDir)
 db.pragma('foreign_keys = ON')
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT NOT NULL UNIQUE COLLATE NOCASE,
-    pass_hash TEXT,
-    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
-    invite_token_hash TEXT,
-    invited_at INTEGER,
-    activated_at INTEGER,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS sessions (
-    token_hash TEXT PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_at INTEGER NOT NULL,
-    expires_at INTEGER NOT NULL
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
-  CREATE INDEX IF NOT EXISTS idx_users_invite ON users(invite_token_hash);
-
-  CREATE TABLE IF NOT EXISTS checklists (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    icon TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS checklist_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    checklist_id INTEGER NOT NULL REFERENCES checklists(id) ON DELETE CASCADE,
-    text TEXT NOT NULL,
-    checked INTEGER NOT NULL DEFAULT 0,
-    position INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_checklists_user ON checklists(user_id);
-  CREATE INDEX IF NOT EXISTS idx_checklist_items_checklist ON checklist_items(checklist_id);
-
-  -- checklist_id NULL means "every list the owner has, now and in future".
-  -- A list-specific row overrides the all-lists row for that list.
-  CREATE TABLE IF NOT EXISTS checklist_shares (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    grantee_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    checklist_id INTEGER REFERENCES checklists(id) ON DELETE CASCADE,
-    permission TEXT NOT NULL CHECK (permission IN ('view', 'edit')),
-    -- 'shared': the grantee runs the list with their own checks. 'collaborative': the
-    -- grantee joins the owner's single live run (checks on checklist_items are common).
-    mode TEXT NOT NULL DEFAULT 'collaborative' CHECK (mode IN ('shared', 'collaborative')),
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    CHECK (owner_id <> grantee_id)
-  );
-
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_checklist_shares_unique
-    ON checklist_shares(owner_id, grantee_id, COALESCE(checklist_id, 0));
-  CREATE INDEX IF NOT EXISTS idx_checklist_shares_grantee ON checklist_shares(grantee_id);
-
-  -- One row per completed run, written when a list with checked items is reset.
-  -- title and the item snapshot are frozen so history survives later edits.
-  CREATE TABLE IF NOT EXISTS checklist_runs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    checklist_id INTEGER NOT NULL REFERENCES checklists(id) ON DELETE CASCADE,
-    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    title TEXT NOT NULL,
-    started_at TEXT,
-    completed_at TEXT NOT NULL DEFAULT (datetime('now')),
-    total_items INTEGER NOT NULL,
-    checked_items INTEGER NOT NULL,
-    -- 1 for a run done on a user's own checks (shared mode); only that user sees it.
-    personal INTEGER NOT NULL DEFAULT 0
-  );
-
-  -- A user's own checks on a list shared in 'shared' mode. Presence of a row = checked.
-  CREATE TABLE IF NOT EXISTS item_checks (
-    item_id INTEGER NOT NULL REFERENCES checklist_items(id) ON DELETE CASCADE,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    PRIMARY KEY (item_id, user_id)
-  );
-
-  -- Start time of a user's current personal run, for duration (cf. checklists.run_started_at).
-  CREATE TABLE IF NOT EXISTS personal_run_starts (
-    checklist_id INTEGER NOT NULL REFERENCES checklists(id) ON DELETE CASCADE,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    started_at TEXT NOT NULL DEFAULT (datetime('now')),
-    PRIMARY KEY (checklist_id, user_id)
-  );
-
-  CREATE TABLE IF NOT EXISTS checklist_run_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    run_id INTEGER NOT NULL REFERENCES checklist_runs(id) ON DELETE CASCADE,
-    text TEXT NOT NULL,
-    checked INTEGER NOT NULL,
-    position INTEGER NOT NULL
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_checklist_runs_checklist ON checklist_runs(checklist_id, completed_at);
-  CREATE INDEX IF NOT EXISTS idx_checklist_run_items_run ON checklist_run_items(run_id);
-
-  -- Instance-wide admin settings. A missing key means the setting's default.
-  CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-  );
-`)
-
-// Migrate databases created before roles/invites existed.
-const columns = db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>
-const names = new Set(columns.map((c) => c.name))
-if (!names.has('role')) {
-  db.exec(`ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user'))`)
-}
-if (!names.has('invite_token_hash')) db.exec('ALTER TABLE users ADD COLUMN invite_token_hash TEXT')
-if (!names.has('invited_at')) db.exec('ALTER TABLE users ADD COLUMN invited_at INTEGER')
-if (!names.has('activated_at')) db.exec('ALTER TABLE users ADD COLUMN activated_at INTEGER')
-
-// Migrate checklists created before icons existed.
-const checklistColumns = db.prepare('PRAGMA table_info(checklists)').all() as Array<{ name: string }>
-if (!checklistColumns.some((c) => c.name === 'icon')) {
-  db.exec('ALTER TABLE checklists ADD COLUMN icon TEXT')
-}
-
-// Migrate checklists created before run history existed. Set when the first item is
-// checked after a reset, so a run's duration can be measured.
-if (!checklistColumns.some((c) => c.name === 'run_started_at')) {
-  db.exec('ALTER TABLE checklists ADD COLUMN run_started_at TEXT')
-}
-
-// Migrate shares and runs created before shared/collaborative modes. Existing shares keep
-// their old behavior, where everyone sees the same checks, i.e. collaborative.
-const shareColumns = db.prepare('PRAGMA table_info(checklist_shares)').all() as Array<{ name: string }>
-if (!shareColumns.some((c) => c.name === 'mode')) {
-  db.exec(`ALTER TABLE checklist_shares ADD COLUMN mode TEXT NOT NULL DEFAULT 'collaborative' CHECK (mode IN ('shared', 'collaborative'))`)
-}
-const runColumns = db.prepare('PRAGMA table_info(checklist_runs)').all() as Array<{ name: string }>
-if (!runColumns.some((c) => c.name === 'personal')) {
-  db.exec('ALTER TABLE checklist_runs ADD COLUMN personal INTEGER NOT NULL DEFAULT 0')
-}
