@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express'
 import { ACCESS_RANK, resolveAccess, type Access, type Scope } from './access.js'
 import { db } from './db.js'
+import { apiLimiter } from './limits.js'
 import { notifyList } from './live.js'
 import { requireAuth, type AuthedRequest } from './middleware.js'
 
@@ -152,7 +153,7 @@ function notifyChanged(req: Request, listId: number) {
 }
 
 export const checklistsRouter = Router()
-checklistsRouter.use(requireAuth)
+checklistsRouter.use(apiLimiter, requireAuth)
 
 checklistsRouter.get('/', (req, res) => {
   const rows = statements.listChecklists.all({ me: (req as unknown as AuthedRequest).user.id }) as ListRow[]

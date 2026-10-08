@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { db } from './db.js'
+import { apiLimiter } from './limits.js'
 import { requireAuth, type AuthedRequest } from './middleware.js'
 
 const WEEKS = 12
@@ -70,7 +71,7 @@ function weekStart(date: Date): number {
 }
 
 export const historyRouter = Router()
-historyRouter.use(requireAuth)
+historyRouter.use(apiLimiter, requireAuth)
 
 historyRouter.get('/', (req, res) => {
   const me = (req as unknown as AuthedRequest).user

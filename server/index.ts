@@ -9,6 +9,7 @@ import { historyRouter } from './history.js'
 import { sharesRouter } from './shares.js'
 import { db } from './db.js'
 import { attachLive } from './live.js'
+import { apiLimiter } from './limits.js'
 import { inviteMail, sendMail, smtpConfigured } from './mail.js'
 import { isRegistrationOpen, setRegistrationOpen } from './settings.js'
 import { COOKIE_NAME, parseCookies, requireAdmin, requireAuth, type AuthedRequest, type Role } from './middleware.js'
@@ -212,7 +213,7 @@ app.post('/api/auth/logout', (req, res) => {
   res.clearCookie(COOKIE_NAME, { path: '/' })
   res.json({ ok: true })
 })
-app.get('/api/auth/me', requireAuth, (req, res) => {
+app.get('/api/auth/me', apiLimiter, requireAuth, (req, res) => {
   const user = (req as AuthedRequest).user
   res.json({ email: user.email, role: user.role })
 })

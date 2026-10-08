@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { rateLimit } from 'express-rate-limit'
 import { db } from './db.js'
+import { apiLimiter } from './limits.js'
 import { notifyOwner } from './live.js'
 import { requireAuth, type AuthedRequest } from './middleware.js'
 
@@ -46,7 +47,7 @@ const shareLimiter = rateLimit({
 })
 
 export const sharesRouter = Router()
-sharesRouter.use(requireAuth)
+sharesRouter.use(apiLimiter, requireAuth)
 
 /** Shares the current user has granted: list-specific (checklistId set) and all-lists (checklistId null). */
 sharesRouter.get('/', (req, res) => {
