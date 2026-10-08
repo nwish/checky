@@ -86,10 +86,11 @@ docker compose up -d --build
 
 ## Accounts & invitations
 
-- The **first** account registered becomes the **admin**. After that, registration closes (`403`) — new users are added by invitation.
+- The **first** account registered becomes the **admin**. After that, registration is **closed** by default (`403`) — new users are added by invitation.
 - An admin invites by email; the invitee gets a single-use link to set their password. Inviting an email that was already sent (but not yet activated) rotates the link and resends.
 - Invited users can sign in only after activating via the link.
-- The admin panel (visible to `role: admin` only) shows members, pending invites, and the invite form.
+- The admin panel (visible to `role: admin` only) shows members, pending invites, the invite form, and a **Registration** switch.
+- **Open registration** (admin panel, off by default): when an admin opens it, the sign-in page offers "Create one" and anyone who can reach the instance can register with an email and password — no invitation and no email verification. They get the `user` role and are signed in immediately. Closing it again doesn't affect existing accounts. An email that already has an account, or a pending invitation, can't be registered this way (`409`). Only open it on a private network, or while you're onboarding people. API: `GET /api/auth/config` (public: whether to offer sign-up), `GET`/`PUT /api/admin/settings` (`{ registrationOpen }`, admin only).
 
 ## Sharing
 
@@ -121,9 +122,9 @@ docker compose up -d --build
 
 - Passwords: PBKDF2-HMAC-SHA256, 600,000 iterations, per-user 16-byte random salt, stored as `pbkdf2-sha256$<iter>$<salt>$<hash>`.
 - Sessions: 256-bit random token; only its SHA-256 hash is stored (with 30-day expiry); token delivered in an `HttpOnly`, `SameSite=Lax` cookie (`rerun_session`).
-- Login never reveals whether an email exists, and unknown-email logins burn a dummy hash so timing stays uniform.
+- Login never reveals whether an email exists, and unknown-email logins burn a dummy hash so timing stays uniform. (While registration is open, the sign-up form necessarily reveals whether an email already has an account.)
 - Invite links: 256-bit single-use token; only its SHA-256 hash is stored; consumed on activation or rotated on resend.
-- Rate limiting (in-memory, per IP+email): 5 logins / 5 min, 10 registrations / 15 min, 10 invites / 15 min, 5 activations per link / 5 min.
+- Rate limiting (in-memory, per IP+email): 5 logins / 5 min, 10 registrations / 15 min, 10 invites / 15 min, 5 activations per link / 5 min. The app doesn't set Express's `trust proxy`, so behind a reverse proxy every client shares the proxy's address and these limits apply to all users together.
 - JSON body limit 16 KB; malformed bodies get a generic 400.
 
 ## Data & reset
