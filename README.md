@@ -131,6 +131,7 @@ docker compose up -d --build    # or build from source
 ## Data & reset
 
 - Database: `data/rerun.db` (gitignored).
+- **Upgrades are automatic.** On startup the app applies any pending schema migrations before it serves anything — nothing to run by hand when you update. Before upgrading an existing database it saves a copy to `data/backups/` (the five newest are kept). If a migration fails it is rolled back and the app refuses to start rather than run on a half-upgraded database; restore from the backup if you need to. A database from a *newer* version than the app is refused too, so rolling back to an older image needs the matching older backup.
 - Reset everything: stop the app, delete the `data/` directory, restart.
 
 ## Project layout
@@ -139,7 +140,9 @@ docker compose up -d --build    # or build from source
 ├── server/          Express API (auth, sessions, rate limiting)
 │   ├── index.ts     app + routes
 │   ├── auth.ts      PBKDF2 hashing, session tokens
-│   ├── db.ts        SQLite connection + schema
+│   ├── db.ts        SQLite connection (runs migrations on startup)
+│   ├── migrations.ts ordered schema migrations (append new ones here)
+│   ├── migrate.ts   migration runner: transactions, backup, checks
 │   ├── mail.ts      SMTP (or console) delivery for invites
 │   ├── ratelimit.ts in-memory attempt limiter
 │   ├── checklists.ts checklist + item routes with access checks
