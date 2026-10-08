@@ -94,11 +94,15 @@ docker compose up -d --build
 ## Sharing
 
 - Owners share with existing, activated users by email, from the Checklists page: either **Share all lists** (live — includes lists created later) or **Share this list** on a single list.
-- Each share is **Can view** (read-only) or **Can edit** (check/uncheck, add, edit, reorder, delete items, reset). Renaming, changing the icon, deleting a list, and managing shares stay owner-only.
-- A list-specific share overrides the owner's share-all for that person, so you can share everything as edit but one list as view-only.
-- Checked state lives on the items, so it is shared: if someone with edit access checks an item, everyone sees it checked.
+- Each share has two independent settings:
+  - **Item access** — *View items* (can run the list: check items and reset it, but not change it) or *Edit items* (can also add, edit, reorder and delete items). Renaming, changing the icon, deleting a list, and managing shares stay owner-only.
+  - **Mode** — *Shared*: the person runs the list on their own, with their own checks and their own history; nothing they check affects you. *Collaborative*: they join your one live run — checks are common, and everyone in the run sees changes instantly.
+- A list-specific share overrides the owner's share-all for that person (both settings), so you can share everything as collaborative but one list as shared.
+- **Live runs** use a websocket (`/api/live`, same origin, authenticated by the session cookie; cross-origin upgrades are refused). The dashboard shows who else is in the run and updates as they check items; it reconnects automatically. The socket only carries "something changed" and presence notices — data and permissions stay on the HTTP API. If you serve the app behind a reverse proxy, it must pass WebSocket upgrades for `/api/*` (e.g. nginx `proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";`).
+- Switching a share's mode takes effect immediately: a collaborator switched to shared leaves the live run and sees their own (initially empty) checks; switching back returns them to the common run, and their earlier personal checks reappear.
+- Existing shares from before modes were added keep their old behavior and became **collaborative**.
 - Shared lists appear on the Dashboard and Checklists page labelled with the owner. Revoking a share removes access immediately; deleting a list or account removes its shares.
-- API: `GET /api/shares`, `PUT /api/shares` (`{ email, permission, checklistId? }`; omit `checklistId` for all lists), `DELETE /api/shares/:id`. Lists and list detail include `access` (`owner` | `edit` | `view`) and `ownerEmail`. Unshared lists return `404`; insufficient access returns `403`.
+- API: `GET /api/shares`, `PUT /api/shares` (`{ email, permission, mode, checklistId? }`; omit `checklistId` for all lists), `DELETE /api/shares/:id`. Lists and list detail include `access` (`owner` | `edit` | `view`), `scope` (`common` | `personal` — whose checks you see) and `ownerEmail`. Unshared lists return `404`; insufficient access returns `403`.
 - The share endpoint reveals whether an email belongs to an active account (needed for a usable UI), so it is limited to 60 requests / 15 min per IP.
 
 ## Duplicating lists
@@ -110,7 +114,7 @@ docker compose up -d --build
 
 - **Reset records a run.** Resetting a list that has at least one checked item saves a run first: which items were checked or missed, who reset it, when, and how long it took (from the first check after the previous reset). Resetting with nothing checked records nothing.
 - The **History** page shows runs per week (last 12 weeks), runs in the last 30 days, average share of items checked, average time, the items you miss most often, a per-list breakdown (click a list to filter), and the latest 50 runs with the items that weren't checked.
-- History covers lists you own and lists shared with you; shared runs show who did them. Runs keep the list title and item text as they were at reset, so later edits don't rewrite history. Deleting a list deletes its runs.
+- History covers the runs you take part in: lists you own or collaborate on (common runs, with who did them) plus your own runs on lists shared with you in shared mode. A shared-mode person's runs are private to them; the owner doesn't see them. Runs keep the list title and item text as they were at reset, so later edits don't rewrite history. Deleting a list deletes its runs.
 - Runs are only recorded from now on; earlier resets can't be reconstructed. API: `GET /api/history[?checklistId=]`.
 
 ## Auth & security notes
@@ -138,7 +142,9 @@ docker compose up -d --build
 │   ├── ratelimit.ts in-memory attempt limiter
 │   ├── checklists.ts checklist + item routes with access checks
 │   ├── shares.ts    per-list / all-lists sharing routes
-│   └── history.ts   run history + analytics route
+│   ├── history.ts   run history + analytics route
+│   ├── access.ts    per-user access + run scope for a list
+│   └── live.ts      websocket: live run notifications + presence
 ├── src/             React app
 │   ├── App.tsx      shell + auth screens
 │   ├── api.ts       fetch client for /api
