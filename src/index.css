@@ -1109,12 +1109,13 @@ select:focus {
 .share-row,
 .share-form {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
 
 .share-email {
-  flex: 1;
+  flex: 1 1 140px;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1122,8 +1123,18 @@ select:focus {
 }
 
 .share-form input {
-  flex: 1;
+  flex: 1 1 120px;
   min-width: 0;
+}
+
+.share-legend {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.share-legend strong {
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .run-item:disabled {
@@ -1377,6 +1388,13 @@ select:focus {
 
 .run-header h2 {
   margin-bottom: 2px;
+}
+
+.run-presence {
+  margin: 4px 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--status);
 }
 
 .run-header-actions {

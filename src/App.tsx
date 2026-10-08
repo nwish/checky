@@ -65,7 +65,7 @@ export default function App() {
       ) : isHistoryRoute ? (
         <HistoryPage />
       ) : (
-        <DashboardPage navigate={navigate} />
+        <DashboardPage navigate={navigate} email={state.user.email} />
       )}
     </AppShell>
   )

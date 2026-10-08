@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, type Checklist, type ChecklistSummary } from './api'
+import { useLiveRun } from './useLive'
 import { checklistIcon } from './icons'
 
 const LAST_CHECKLIST_KEY = 'rerun-last-checklist'
@@ -31,7 +32,7 @@ const icons = {
   )
 }
 
-export default function DashboardPage({ navigate }: { navigate: (to: string) => void }) {
+export default function DashboardPage({ navigate, email }: { navigate: (to: string) => void; email: string }) {
   const [summaries, setSummaries] = useState<ChecklistSummary[] | null>(null)
   const [activeId, setActiveId] = useState<number | null>(null)
   const [checklist, setChecklist] = useState<Checklist | null>(null)
@@ -61,10 +62,32 @@ export default function DashboardPage({ navigate }: { navigate: (to: string) => 
     }
   }, [activeId])
 
+  // Refetches the open list; steps back to the picker if it's gone or no longer visible.
+  function reloadChecklist(id: number) {
+    api
+      .getChecklist(id)
+      .then((fresh) => setChecklist((c) => (c && c.id === fresh.id ? fresh : c)))
+      .catch(() => {
+        setActiveId(null)
+        api.checklists().then((r) => setSummaries(r.checklists))
+      })
+  }
+
+  // Collaborators' checks arrive over a websocket; the list stays in sync without reloading.
+  const refreshOpen = () => {
+    if (activeId !== null) reloadChecklist(activeId)
+  }
+  const here = useLiveRun(checklist?.scope === 'common' ? activeId : null, { onChanged: refreshOpen, onLeft: refreshOpen })
+  const others = here.filter((e) => e !== email)
+
   async function toggleItem(itemId: number, checked: boolean) {
     if (!checklist) return
     setChecklist((c) => (c ? { ...c, items: c.items.map((i) => (i.id === itemId ? { ...i, checked } : i)) } : c))
-    await api.updateItem(checklist.id, itemId, { checked })
+    try {
+      await api.updateItem(checklist.id, itemId, { checked })
+    } catch {
+      reloadChecklist(checklist.id)
+    }
   }
 
   async function resetChecklist() {
@@ -134,17 +157,20 @@ export default function DashboardPage({ navigate }: { navigate: (to: string) => 
             <h2>{checklist.title}</h2>
             <p className="muted">
               {done}/{total} checked
-              {checklist.access !== 'owner' && ` · shared by ${checklist.ownerEmail}${canEdit ? '' : ' · view only'}`}
+              {checklist.access !== 'owner' && ` · from ${checklist.ownerEmail} · ${checklist.scope === 'common' ? 'live run together' : 'your own run'}`}
             </p>
+            {others.length > 0 && (
+              <p className="muted run-presence" aria-live="polite">
+                In this run now: {others.join(', ')}
+              </p>
+            )}
           </div>
         </div>
         <div className="run-header-actions">
-          {canEdit && (
-            <button type="button" className="ghost" onClick={resetChecklist} disabled={done === 0} title="Save this run to History and clear the checks">
-              {icons.reset}
-              Reset
-            </button>
-          )}
+          <button type="button" className="ghost" onClick={resetChecklist} disabled={done === 0} title="Save this run to History and clear the checks">
+            {icons.reset}
+            Reset
+          </button>
           {summaries.length > 1 && (
             <button type="button" className="ghost" onClick={() => setActiveId(null)}>
               {icons.switchList}
@@ -171,7 +197,6 @@ export default function DashboardPage({ navigate }: { navigate: (to: string) => 
                 type="button"
                 className={`run-item${item.checked ? ' checked' : ''}`}
                 onClick={() => toggleItem(item.id, !item.checked)}
-                disabled={!canEdit}
               >
                 <span className="run-item-check">{item.checked ? icons.checkFilled : icons.checkEmpty}</span>
                 <span className="run-item-text">{item.text}</span>
