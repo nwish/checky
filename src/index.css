@@ -276,7 +276,7 @@ button.link:active {
 .app-shell {
   display: grid;
   grid-template-columns: 260px 1fr;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr;
   min-height: 100vh;
 }
 
@@ -296,17 +296,6 @@ button.link:active {
   padding: 20px 16px;
   position: sticky;
   top: 0;
-}
-
-.app-nav-foot {
-  grid-column: 1;
-  grid-row: 3;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 0 16px 20px;
-  position: sticky;
-  bottom: 0;
 }
 
 .nav-top-row {
@@ -471,79 +460,6 @@ button.link:active {
   outline-offset: 2px;
 }
 
-.nav-user {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--key-border);
-  background: var(--key);
-}
-
-.nav-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--chassis);
-  border: 1px solid var(--key-border-strong);
-  color: var(--legend);
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 500;
-}
-
-.nav-user-info {
-  min-width: 0;
-  flex: 1;
-}
-
-.nav-user-info .email {
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.nav-user-info .badge {
-  margin-top: 4px;
-}
-
-.nav-signout {
-  display: flex;
-  flex-shrink: 0;
-  padding: 7px;
-  background: var(--key);
-  border: 1px solid var(--key-border);
-  box-shadow: var(--shadow-key-rest);
-  border-radius: var(--radius-sm);
-  color: var(--dim);
-  cursor: pointer;
-  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, background 0.08s ease-out, color 0.08s ease-out;
-}
-
-.nav-signout svg {
-  width: 16px;
-  height: 16px;
-}
-
-.nav-signout:hover {
-  background: var(--key-hover);
-  color: var(--danger);
-  box-shadow: var(--shadow-key-hover);
-  transform: translateY(-1px);
-}
-
-.nav-signout:active {
-  transform: translateY(1px);
-  box-shadow: var(--shadow-key-pressed);
-}
-
 .app-main {
   grid-column: 2;
   grid-row: 1 / -1;
@@ -599,19 +515,51 @@ button.link:active {
   }
 
   .app-main {
-    padding: 24px 20px 150px;
+    padding: 24px 20px 40px;
   }
+}
 
-  .app-nav-foot {
-    position: sticky;
-    bottom: 0;
-    z-index: 5;
-    background: var(--panel);
-    border-right: none;
-    border-top: 1px solid var(--key-border);
-    box-shadow: 0 -2px 14px -6px rgba(0, 0, 0, 0.55);
-    padding: 16px;
-  }
+/* ---- Settings ---- */
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 560px;
+}
+
+.settings .card {
+  max-width: none;
+}
+
+.settings .card h2 {
+  margin-top: 0;
+}
+
+.settings .theme-picker {
+  gap: 12px;
+  padding: 4px 2px;
+}
+
+.settings .theme-swatch {
+  width: 36px;
+  height: 36px;
+}
+
+.settings-signout {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-signout svg {
+  width: 16px;
+  height: 16px;
+}
+
+.settings-signout:hover {
+  color: var(--danger);
 }
 /* ---- Dashboard: the instrument panel ---- */
 

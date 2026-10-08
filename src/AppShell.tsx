@@ -1,6 +1,5 @@
-import { useState, type CSSProperties, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { Me } from './api'
-import { applyTheme, getStoredTheme, THEMES, type ThemeId } from './theme'
 
 const icons = {
   dashboard: (
@@ -35,11 +34,17 @@ const icons = {
       <path d="m9.5 12 1.8 1.8L15 10" />
     </svg>
   ),
-  signOut: (
+  settings: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <path d="m16 17 5-5-5-5" />
-      <path d="M21 12H9" />
+      <line x1="4" y1="21" x2="4" y2="14" />
+      <line x1="4" y1="10" x2="4" y2="3" />
+      <line x1="12" y1="21" x2="12" y2="12" />
+      <line x1="12" y1="8" x2="12" y2="3" />
+      <line x1="20" y1="21" x2="20" y2="16" />
+      <line x1="20" y1="12" x2="20" y2="3" />
+      <line x1="1" y1="14" x2="7" y2="14" />
+      <line x1="9" y1="8" x2="15" y2="8" />
+      <line x1="17" y1="16" x2="23" y2="16" />
     </svg>
   ),
   menu: (
@@ -63,7 +68,6 @@ export default function AppShell({
   user,
   path,
   navigate,
-  onSignOut,
   title,
   subtitle,
   children
@@ -71,18 +75,17 @@ export default function AppShell({
   user: Me
   path: string
   navigate: (to: string) => void
-  onSignOut: () => void
   title: string
   subtitle?: string
   children: ReactNode
 }) {
-  const initials = user.email.slice(0, 2).toUpperCase()
   const [menuOpen, setMenuOpen] = useState(false)
 
   const navItems: NavItem[] = [
     { key: 'dashboard', label: 'Dashboard', path: '/', icon: icons.dashboard },
     { key: 'checklists', label: 'Checklists', path: '/checklists', icon: icons.checklists },
     { key: 'history', label: 'History', path: '/history', icon: icons.history },
+    { key: 'settings', label: 'Settings', path: '/settings', icon: icons.settings },
     ...(user.role === 'admin' ? [{ key: 'admin', label: 'Admin', path: '/admin', icon: icons.admin }] : [])
   ]
 
@@ -136,48 +139,6 @@ export default function AppShell({
         </div>
         {children}
       </main>
-
-      <div className="app-nav-foot">
-        <ThemePicker />
-
-        <div className="nav-user">
-          <div className="nav-avatar">{initials}</div>
-          <div className="nav-user-info">
-            <div className="email">{user.email}</div>
-            <span className={user.role === 'admin' ? 'badge badge-admin' : 'badge'}>{user.role}</span>
-          </div>
-          <button type="button" className="nav-signout" onClick={onSignOut} title="Sign out" aria-label="Sign out">
-            {icons.signOut}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ThemePicker() {
-  const [active, setActive] = useState<ThemeId>(() => getStoredTheme())
-
-  function select(id: ThemeId) {
-    applyTheme(id)
-    setActive(id)
-  }
-
-  return (
-    <div className="theme-picker" role="radiogroup" aria-label="Accent color">
-      {THEMES.map((theme) => (
-        <button
-          key={theme.id}
-          type="button"
-          role="radio"
-          aria-checked={active === theme.id}
-          aria-label={theme.label}
-          title={theme.label}
-          className={`theme-swatch${active === theme.id ? ' active' : ''}`}
-          style={{ '--swatch': theme.action } as CSSProperties}
-          onClick={() => select(theme.id)}
-        />
-      ))}
     </div>
   )
 }
