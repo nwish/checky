@@ -6,8 +6,6 @@ Going kayaking? Open the kayaking list, run through it top to bottom, and go kay
 
 Local and self-hosted: everything lives on your machine in a SQLite file. No cloud account, no sync, no subscription.
 
-Current state: foundation — secure user/pass auth is working; the checklist features are next.
-
 ## Stack
 
 | Layer     | Tech                                                        |
