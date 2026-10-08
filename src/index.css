@@ -682,7 +682,7 @@ button.link:active {
   font-family: var(--font-mono);
   font-size: 1.6rem;
   font-weight: 500;
-  color: var(--status);
+  color: var(--action);
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
