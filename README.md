@@ -127,6 +127,7 @@ docker compose up -d --build    # or build from source
 - Login never reveals whether an email exists, and unknown-email logins burn a dummy hash so timing stays uniform. (While registration is open, the sign-up form necessarily reveals whether an email already has an account.)
 - Invite links: 256-bit single-use token; only its SHA-256 hash is stored; consumed on activation or rotated on resend.
 - Rate limiting (in-memory, per IP+email): 5 logins / 5 min, 10 registrations / 15 min, 10 invites / 15 min, 5 activations per link / 5 min. The app doesn't set Express's `trust proxy`, so behind a reverse proxy every client shares the proxy's address and these limits apply to all users together.
+- Signed-in API traffic (checklists, shares, history, `/api/auth/me`) is limited to 300 requests per minute **per session** (not per IP, so it isn't affected by the proxy caveat above); normal use stays far below this.
 - JSON body limit 16 KB; malformed bodies get a generic 400.
 
 ## Data & reset
