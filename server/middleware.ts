@@ -1,3 +1,4 @@
+import type { IncomingHttpHeaders } from 'node:http'
 import type { NextFunction, Request, Response } from 'express'
 import { hashToken } from './auth.js'
 import { db } from './db.js'
@@ -15,7 +16,7 @@ const findSession = db.prepare(
     WHERE s.token_hash = ?`
 )
 
-export function parseCookies(req: Request): Record<string, string> {
+export function parseCookies(req: { headers: IncomingHttpHeaders }): Record<string, string> {
   const out: Record<string, string> = {}
   for (const chunk of (req.headers.cookie ?? '').split(';')) {
     const idx = chunk.indexOf('=')
@@ -25,18 +26,23 @@ export function parseCookies(req: Request): Record<string, string> {
   return out
 }
 
+/** Resolves the session cookie in `headers` to a user, or null when missing, unknown or expired. */
+export function authenticate(headers: IncomingHttpHeaders): { user: AuthedRequest['user']; tokenHash: string } | null {
+  const token = parseCookies({ headers })[COOKIE_NAME]
+  if (!token) return null
+  const tokenHash = hashToken(token)
+  const row = findSession.get(tokenHash) as SessionRow | undefined
+  if (!row || row.expires_at < Date.now()) return null
+  return { user: { id: row.user_id, email: row.email, role: row.role as Role }, tokenHash }
+}
+
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const token = parseCookies(req)[COOKIE_NAME]
-  if (!token) {
+  const session = authenticate(req.headers)
+  if (!session) {
     res.status(401).json({ error: 'not signed in' })
     return
   }
-  const row = findSession.get(hashToken(token)) as SessionRow | undefined
-  if (!row || row.expires_at < Date.now()) {
-    res.status(401).json({ error: 'not signed in' })
-    return
-  }
-  ;(req as AuthedRequest).user = { id: row.user_id, email: row.email, role: row.role as Role }
+  ;(req as AuthedRequest).user = session.user
   next()
 }
 

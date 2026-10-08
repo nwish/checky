@@ -8,6 +8,7 @@ import { checklistsRouter } from './checklists.js'
 import { historyRouter } from './history.js'
 import { sharesRouter } from './shares.js'
 import { db } from './db.js'
+import { attachLive } from './live.js'
 import { inviteMail, sendMail, smtpConfigured } from './mail.js'
 import { COOKIE_NAME, parseCookies, requireAdmin, requireAuth, type AuthedRequest, type Role } from './middleware.js'
 
@@ -305,7 +306,8 @@ app.use((err: Error & { status?: number }, _req: Request, res: Response, _next: 
   res.status(status).json({ error: status >= 500 ? 'internal error' : 'invalid request' })
 })
 
-app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, HOST, () => {
   console.log('rerun api listening on http://%s:%d', HOST === '0.0.0.0' ? 'localhost' : HOST, PORT)
   if (!smtpConfigured()) console.warn('[mail] SMTP_HOST not set — invitation emails will be logged, not sent')
 })
+attachLive(server)

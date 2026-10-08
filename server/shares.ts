@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { rateLimit } from 'express-rate-limit'
 import { db } from './db.js'
+import { notifyOwner } from './live.js'
 import { requireAuth, type AuthedRequest } from './middleware.js'
 
 type Permission = 'view' | 'edit'
@@ -106,6 +107,7 @@ sharesRouter.put('/', shareLimiter, (req, res) => {
   } else {
     id = Number(statements.insertShare.run(me.id, grantee.id, checklistId, permission, mode).lastInsertRowid)
   }
+  notifyOwner(me.id) // a revoked or re-moded grantee must leave the live run
   res.status(existing ? 200 : 201).json(serialize(statements.getShare.get(id) as ShareRow))
 })
 
@@ -116,5 +118,6 @@ sharesRouter.delete('/:id', (req, res) => {
     res.status(404).json({ error: 'share not found' })
     return
   }
+  notifyOwner(me.id)
   res.json({ ok: true })
 })

@@ -1,6 +1,7 @@
-import { Router, type Response } from 'express'
+import { Router, type Request, type Response } from 'express'
 import { ACCESS_RANK, resolveAccess, type Access, type Scope } from './access.js'
 import { db } from './db.js'
+import { notifyList } from './live.js'
 import { requireAuth, type AuthedRequest } from './middleware.js'
 
 type ChecklistRow = { id: number; user_id: number; title: string; icon: string | null; created_at: string; updated_at: string; owner_email: string }
@@ -145,6 +146,11 @@ function itemFor(checklist: LoadedChecklist, userId: number, itemId: number): It
   return (checklist.scope === 'personal' ? statements.findItemPersonal.get({ me: userId, id: itemId }) : statements.findItem.get(itemId)) as ItemRow
 }
 
+/** Tells live collaborators the list changed. `x-client-id` lets the sending tab skip refetching its own edit. */
+function notifyChanged(req: Request, listId: number) {
+  notifyList(listId, req.get('x-client-id') ?? undefined)
+}
+
 export const checklistsRouter = Router()
 checklistsRouter.use(requireAuth)
 
@@ -228,6 +234,7 @@ checklistsRouter.patch('/:id', (req, res) => {
   }
 
   const row = statements.findChecklist.get(checklist.id) as ChecklistRow
+  notifyChanged(req, checklist.id)
   res.json({ id: row.id, title: row.title, icon: row.icon, updatedAt: row.updated_at })
 })
 
@@ -235,6 +242,7 @@ checklistsRouter.delete('/:id', (req, res) => {
   const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'owner')
   if (!checklist) return
   statements.deleteChecklist.run(checklist.id)
+  notifyChanged(req, checklist.id)
   res.json({ ok: true })
 })
 
@@ -282,6 +290,7 @@ checklistsRouter.post('/:id/reset', (req, res) => {
       statements.touchChecklist.run(checklist.id)
     }
   })()
+  if (!personal) notifyChanged(req, checklist.id)
   res.json({ items: itemsFor(checklist, me.id).map(serializeItem) })
 })
 
@@ -301,6 +310,7 @@ checklistsRouter.post('/:id/items', (req, res) => {
   const info = statements.insertItem.run(checklist.id, text, maxPos + 1)
   statements.touchChecklist.run(checklist.id)
   const item = statements.findItem.get(Number(info.lastInsertRowid)) as ItemRow
+  notifyChanged(req, checklist.id)
   res.status(201).json(serializeItem(item))
 })
 
@@ -347,6 +357,7 @@ checklistsRouter.patch('/:id/items/:itemId', (req, res) => {
   }
   // Personal checks are invisible to others, so they shouldn't reorder the owner's list.
   if (editsText || checklist.scope === 'common') statements.touchChecklist.run(checklist.id)
+  if (editsText || (typeof body?.checked === 'boolean' && checklist.scope === 'common')) notifyChanged(req, checklist.id)
   res.json(serializeItem(itemFor(checklist, me.id, item.id)))
 })
 
@@ -360,6 +371,7 @@ checklistsRouter.delete('/:id/items/:itemId', (req, res) => {
   }
   statements.deleteItem.run(item.id)
   statements.touchChecklist.run(checklist.id)
+  notifyChanged(req, checklist.id)
   res.json({ ok: true })
 })
 
@@ -388,5 +400,6 @@ checklistsRouter.post('/:id/items/:itemId/move', (req, res) => {
   statements.updateItemPosition.run(neighbor.position, item.id)
   statements.updateItemPosition.run(item.position, neighbor.id)
   statements.touchChecklist.run(checklist.id)
+  notifyChanged(req, checklist.id)
   res.json({ items: itemsFor(checklist, (req as unknown as AuthedRequest).user.id).map(serializeItem) })
 })
