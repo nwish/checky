@@ -2,5 +2,11 @@ node_modules
 data
 dist
 .git
+.github
+.local
+.claude
+.agents
+.codex
+.impeccable
 *.log
 .env
