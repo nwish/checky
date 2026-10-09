@@ -2,7 +2,7 @@ import { useEffect, useState, type CSSProperties } from 'react'
 import { api, type Me } from './api'
 import Avatar from './Avatar'
 import IconPicker from './IconPicker'
-import { applyTheme, getStoredTheme, THEMES, type ThemeId } from './theme'
+import { applyTheme, applyThemeMode, getStoredTheme, getStoredThemeMode, THEMES, type ThemeId, type ThemeMode } from './theme'
 
 const NAME_MAX = 60
 
@@ -16,6 +16,7 @@ const signOutIcon = (
 
 export default function SettingsPage({ user, onSignOut, onProfileChange }: { user: Me; onSignOut: () => void; onProfileChange: (me: Me) => void }) {
   const [theme, setTheme] = useState<ThemeId>(() => getStoredTheme())
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => getStoredThemeMode())
   const [nameDraft, setNameDraft] = useState(user.name ?? '')
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -27,6 +28,11 @@ export default function SettingsPage({ user, onSignOut, onProfileChange }: { use
   function selectTheme(id: ThemeId) {
     applyTheme(id)
     setTheme(id)
+  }
+
+  function selectThemeMode(mode: ThemeMode) {
+    applyThemeMode(mode)
+    setThemeMode(mode)
   }
 
   async function saveProfile(patch: { name?: string | null; avatar?: string | null }) {
@@ -104,21 +110,46 @@ export default function SettingsPage({ user, onSignOut, onProfileChange }: { use
 
       <section className="card">
         <h2>Appearance</h2>
-        <p className="muted">Accent color for buttons and the active page. Saved on this device.</p>
-        <div className="theme-picker" role="radiogroup" aria-label="Accent color">
-          {THEMES.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              role="radio"
-              aria-checked={theme === option.id}
-              aria-label={option.label}
-              title={option.label}
-              className={`theme-swatch${theme === option.id ? ' active' : ''}`}
-              style={{ '--swatch': option.action } as CSSProperties}
-              onClick={() => selectTheme(option.id)}
-            />
-          ))}
+        <p className="muted">Choose a color mode and accent. Both are saved on this device.</p>
+        <div className="appearance-option">
+          <span className="appearance-label">Color mode</span>
+          <div className="theme-mode-picker" role="radiogroup" aria-label="Color mode">
+            {([
+              ['auto', 'Auto'],
+              ['light', 'Light'],
+              ['dark', 'Dark']
+            ] as const).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                role="radio"
+                aria-checked={themeMode === mode}
+                className={`theme-mode-option${themeMode === mode ? ' active' : ''}`}
+                onClick={() => selectThemeMode(mode)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {themeMode === 'auto' && <span className="theme-mode-hint">Matches your device setting.</span>}
+        </div>
+        <div className="appearance-option">
+          <span className="appearance-label">Accent color</span>
+          <div className="theme-picker" role="radiogroup" aria-label="Accent color">
+            {THEMES.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={theme === option.id}
+                aria-label={option.label}
+                title={option.label}
+                className={`theme-swatch${theme === option.id ? ' active' : ''}`}
+                style={{ '--swatch': option.action } as CSSProperties}
+                onClick={() => selectTheme(option.id)}
+              />
+            ))}
+          </div>
         </div>
       </section>
     </div>

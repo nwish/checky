@@ -1,4 +1,5 @@
 export type ThemeId = 'orange' | 'blue' | 'green' | 'purple' | 'yellow' | 'gray'
+export type ThemeMode = 'auto' | 'light' | 'dark'
 
 export type Theme = {
   id: ThemeId
@@ -21,7 +22,9 @@ export const THEMES: Theme[] = [
 ]
 
 export const DEFAULT_THEME: ThemeId = 'orange'
+export const DEFAULT_THEME_MODE: ThemeMode = 'auto'
 const STORAGE_KEY = 'rerun-theme'
+const MODE_STORAGE_KEY = 'rerun-theme-mode'
 
 export function getStoredTheme(): ThemeId {
   try {
@@ -44,4 +47,43 @@ export function applyTheme(id: ThemeId) {
   } catch {
     // best-effort persistence only
   }
+}
+
+export function getStoredThemeMode(): ThemeMode {
+  try {
+    const stored = window.localStorage.getItem(MODE_STORAGE_KEY)
+    if (stored === 'auto' || stored === 'light' || stored === 'dark') return stored
+  } catch {
+    // localStorage unavailable (private mode, etc.) - fall through to default
+  }
+  return DEFAULT_THEME_MODE
+}
+
+function resolvedThemeMode(mode: ThemeMode): Exclude<ThemeMode, 'auto'> {
+  if (mode !== 'auto') return mode
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+export function applyThemeMode(mode: ThemeMode) {
+  const resolved = resolvedThemeMode(mode)
+  const root = document.documentElement
+  root.dataset.themeMode = resolved
+  root.style.colorScheme = resolved
+  try {
+    window.localStorage.setItem(MODE_STORAGE_KEY, mode)
+  } catch {
+    // best-effort persistence only
+  }
+}
+
+/** Reapply the automatic preference when the operating system changes modes. */
+export function watchSystemTheme() {
+  const media = window.matchMedia?.('(prefers-color-scheme: dark)')
+  if (!media) return () => {}
+
+  const update = () => {
+    if (getStoredThemeMode() === 'auto') applyThemeMode('auto')
+  }
+  media.addEventListener('change', update)
+  return () => media.removeEventListener('change', update)
 }

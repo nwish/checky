@@ -46,6 +46,31 @@
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+:root[data-theme-mode='light'] {
+  color-scheme: light;
+
+  --chassis: #f4f2ee;
+  --panel: #fffdfa;
+  --key: #ebe7e1;
+  --key-hover: #e1ddd6;
+  --key-border: #d2cbc1;
+  --key-border-strong: #b7afa4;
+
+  --ink: #201f1c;
+  --legend: #625d55;
+  --dim: #777169;
+
+  --status: #a85c00;
+  --success: #397142;
+  --danger: #b23d35;
+  --focus: #2563c7;
+
+  --shadow-key-rest: 0 1px 0 rgba(255, 255, 255, 0.9), 0 6px 14px -7px rgba(54, 47, 38, 0.3);
+  --shadow-key-hover: 0 1px 0 rgba(255, 255, 255, 0.9), 0 10px 20px -8px rgba(54, 47, 38, 0.35);
+  --shadow-key-pressed: 0 4px 8px -6px rgba(54, 47, 38, 0.3);
+  --shadow-panel: 0 2px 14px -7px rgba(54, 47, 38, 0.25);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -580,6 +605,58 @@ button.link:active {
 .settings .theme-swatch {
   width: 36px;
   height: 36px;
+}
+
+.appearance-option {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.appearance-label {
+  color: var(--legend);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.theme-mode-picker {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  background: var(--chassis);
+  border: 1px solid var(--key-border);
+  border-radius: calc(var(--radius-sm) + 2px);
+}
+
+.theme-mode-option {
+  min-width: 70px;
+  padding: 7px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  color: var(--legend);
+  font-size: 0.86rem;
+}
+
+.theme-mode-option:hover {
+  background: var(--key);
+  box-shadow: none;
+}
+
+.theme-mode-option.active,
+.theme-mode-option.active:hover {
+  background: var(--panel);
+  border-color: var(--key-border);
+  box-shadow: var(--shadow-key-rest);
+  color: var(--ink);
+  transform: none;
+}
+
+.theme-mode-hint {
+  color: var(--dim);
+  font-size: 0.84rem;
 }
 
 .settings-signout {
