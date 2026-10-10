@@ -39,6 +39,7 @@ A few things worth checking twice (or a hundred times).
 | Database  | SQLite via `better-sqlite3` (WAL mode)                       |
 | Auth      | PBKDF2 password hashing, server-side sessions in SQLite      |
 
+Compliments of Claude, ChatGPT/Codex, Qwen3.8-Flash-Next, and a touch.. and I do mean like a super, duper tiny touch, of my own development experience. 
 
 ![Node.js](https://img.shields.io/badge/Node.js-24-339933?style=flat-square&logo=nodedotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-149ECA?style=flat-square&logo=react&logoColor=white)
