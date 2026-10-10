@@ -133,10 +133,10 @@ export const api = {
   updateItem: (id: number, itemId: number, patch: { text?: string; checked?: boolean }) =>
     request<ChecklistItem>(`/api/checklists/${id}/items/${itemId}`, json('PATCH', `/api/checklists/${id}/items/${itemId}`, patch)),
   deleteItem: (id: number, itemId: number) => request<{ ok: boolean }>(`/api/checklists/${id}/items/${itemId}`, { method: 'DELETE' }),
-  moveItem: (id: number, itemId: number, direction: 'up' | 'down') =>
+  reorderItems: (id: number, order: number[]) =>
     request<{ items: ChecklistItem[] }>(
-      `/api/checklists/${id}/items/${itemId}/move`,
-      json('POST', `/api/checklists/${id}/items/${itemId}/move`, { direction })
+      `/api/checklists/${id}/items/reorder`,
+      json('POST', `/api/checklists/${id}/items/reorder`, { order })
     ),
 
   shares: () => request<{ shares: Share[] }>('/api/shares'),

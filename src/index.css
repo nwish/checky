@@ -1125,9 +1125,10 @@ button.link:active {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  position: relative;
 }
 
-.checklist-item-row {
+.checklist-item-card {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1184,6 +1185,61 @@ button.link:active {
 .checklist-item-actions svg {
   width: 15px;
   height: 15px;
+}
+
+.checklist-item-grip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 26px;
+  padding: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+  color: var(--dim);
+  cursor: grab;
+  touch-action: none;
+}
+
+.checklist-item-grip:hover {
+  color: var(--ink);
+  transform: none;
+  box-shadow: none;
+}
+
+.checklist-item-grip svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* While grabbed the card floats above the list (JS applies the transform to track the
+   pointer); its in-flow slot stays behind as a dashed outline showing where it will land. */
+.checklist-item-card {
+  transition: box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.checklist-item-row.dragging {
+  outline: 2px dashed var(--key-border);
+  border-radius: var(--radius-sm);
+}
+
+.checklist-item-row.dragging .checklist-item-card {
+  position: relative;
+  z-index: 10;
+  transition: none;
+  border-color: var(--focus);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--focus);
+  cursor: grabbing;
+}
+
+.checklist-item-list:has(.dragging) {
+  user-select: none;
+}
+
+.checklist-item-row.dragging .checklist-item-grip {
+  cursor: grabbing;
 }
 
 .checklist-add-item-form {

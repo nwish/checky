@@ -411,31 +411,30 @@ checklistsRouter.delete('/:id/items/:itemId', (req, res) => {
   res.json({ ok: true })
 })
 
-checklistsRouter.post('/:id/items/:itemId/move', (req, res) => {
+// Persist a full drag-and-drop ordering. `order` must list every item id of the list exactly once.
+const applyOrder = db.transaction((ids: number[]) => {
+  ids.forEach((id, position) => statements.updateItemPosition.run(position, id))
+})
+
+checklistsRouter.post('/:id/items/reorder', (req, res) => {
   const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'edit')
   if (!checklist) return
-  const item = statements.findItem.get(Number(req.params.itemId)) as ItemRow | undefined
-  if (!item || item.checklist_id !== checklist.id) {
-    res.status(404).json({ error: 'item not found' })
-    return
-  }
-  const direction = asString((req.body as Record<string, unknown>)?.direction)
-  if (direction !== 'up' && direction !== 'down') {
-    res.status(400).json({ error: "direction must be 'up' or 'down'" })
-    return
-  }
+  const order = (req.body as Record<string, unknown>)?.order
   const items = statements.listItems.all(checklist.id) as ItemRow[]
-  const idx = items.findIndex((i) => i.id === item.id)
-  const swapIdx = direction === 'up' ? idx - 1 : idx + 1
-  if (swapIdx < 0 || swapIdx >= items.length) {
-    // Already at the edge; nothing to do.
-    res.json({ items: itemsFor(checklist, (req as unknown as AuthedRequest).user.id).map(serializeItem) })
+  const valid =
+    Array.isArray(order) &&
+    order.length === items.length &&
+    new Set(order).size === order.length &&
+    order.every((id) => typeof id === 'number' && items.some((i) => i.id === id))
+  if (!valid) {
+    res.status(400).json({ error: 'order must list every item of the checklist exactly once' })
     return
   }
-  const neighbor = items[swapIdx]
-  statements.updateItemPosition.run(neighbor.position, item.id)
-  statements.updateItemPosition.run(item.position, neighbor.id)
-  statements.touchChecklist.run(checklist.id)
-  notifyChanged(req, checklist.id)
+  const current = items.map((i) => i.id)
+  if (order.some((id, i) => id !== current[i])) {
+    applyOrder(order as number[])
+    statements.touchChecklist.run(checklist.id)
+    notifyChanged(req, checklist.id)
+  }
   res.json({ items: itemsFor(checklist, (req as unknown as AuthedRequest).user.id).map(serializeItem) })
 })

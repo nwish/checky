@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { api, type Checklist, type ChecklistSummary, type Share } from './api'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { api, type Checklist, type ChecklistItem, type ChecklistSummary, type Share } from './api'
 import { ownerLabel } from './Avatar'
 import IconPicker from './IconPicker'
 import Modal from './Modal'
@@ -12,6 +12,16 @@ const icons = {
       <path d="m6 9 6 6 6-6" />
     </svg>
   ),
+  grip: (
+    <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <circle cx="9" cy="6" r="1.6" />
+      <circle cx="15" cy="6" r="1.6" />
+      <circle cx="9" cy="12" r="1.6" />
+      <circle cx="15" cy="12" r="1.6" />
+      <circle cx="9" cy="18" r="1.6" />
+      <circle cx="15" cy="18" r="1.6" />
+    </svg>
+  ),
   share: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="18" cy="5" r="3" />
@@ -19,18 +29,6 @@ const icons = {
       <circle cx="18" cy="19" r="3" />
       <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
       <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-    </svg>
-  ),
-  up: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 19V5" />
-      <path d="m5 12 7-7 7 7" />
-    </svg>
-  ),
-  down: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 5v14" />
-      <path d="m19 12-7 7-7-7" />
     </svg>
   ),
   trash: (
@@ -179,6 +177,45 @@ function ChecklistCard({
   const [checklist, setChecklist] = useState<Checklist | null>(null)
   const [titleDraft, setTitleDraft] = useState(summary.title)
   const [newItem, setNewItem] = useState('')
+  const listRef = useRef<HTMLUListElement>(null)
+  // grabOffset: pointer distance below the row's top edge when grabbed. pointerY: latest clientY.
+  const dragRef = useRef<{ id: number; before: ChecklistItem[]; grabOffset: number; pointerY: number } | null>(null)
+  const [draggingId, setDraggingId] = useState<number | null>(null)
+
+  // The grabbed row is lifted out of the flow visually (transform) and tracks the pointer,
+  // while its slot in the list shows where it will land. offsetTop ignores transforms, so
+  // this stays correct as the neighbours reorder underneath it.
+  function liftDraggedRow() {
+    const drag = dragRef.current
+    const list = listRef.current
+    if (!drag || !list) return
+    const row = list.querySelector<HTMLElement>(`[data-item-id="${drag.id}"]`)
+    const card = row?.firstElementChild as HTMLElement | null
+    if (!row || !card) return
+    const dy = drag.pointerY - list.getBoundingClientRect().top - drag.grabOffset - row.offsetTop
+    card.style.transform = `translateY(${dy}px) scale(1.02) rotate(-0.6deg)`
+  }
+
+  useLayoutEffect(liftDraggedRow, [checklist?.items])
+
+  // Track the drag on the window, not the handle: reordering moves the handle in the DOM,
+  // which drops pointer capture, so the handle itself would stop receiving move/up events.
+  const dragHandlers = useRef({ move: dragOver, end: endDrag })
+  dragHandlers.current = { move: dragOver, end: endDrag }
+  useEffect(() => {
+    if (draggingId === null) return
+    const move = (e: PointerEvent) => dragHandlers.current.move(e)
+    const up = () => dragHandlers.current.end(false)
+    const cancel = () => dragHandlers.current.end(true)
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', cancel)
+    return () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', cancel)
+    }
+  }, [draggingId])
   const [sharing, setSharing] = useState(false)
 
   useEffect(() => {
@@ -233,9 +270,62 @@ function ChecklistCard({
     onChanged()
   }
 
-  async function moveItem(itemId: number, direction: 'up' | 'down') {
-    const r = await api.moveItem(summary.id, itemId, direction)
-    setChecklist((c) => (c ? { ...c, items: r.items } : c))
+  // Drag-to-reorder uses pointer events (not HTML5 DnD) so it also works by touch.
+  // The list reorders live under the pointer; the final order is saved on release.
+  function startDrag(e: React.PointerEvent<HTMLButtonElement>, itemId: number) {
+    if (!checklist || (e.pointerType === 'mouse' && e.button !== 0)) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    const row = e.currentTarget.closest('li')!
+    dragRef.current = {
+      id: itemId,
+      before: checklist.items,
+      grabOffset: e.clientY - row.getBoundingClientRect().top,
+      pointerY: e.clientY
+    }
+    setDraggingId(itemId)
+  }
+
+  function dragOver(e: { clientY: number }) {
+    const drag = dragRef.current
+    if (!drag || !listRef.current) return
+    drag.pointerY = e.clientY
+    liftDraggedRow()
+    const others = Array.from(listRef.current.querySelectorAll<HTMLElement>('[data-item-id]')).filter(
+      (row) => Number(row.dataset.itemId) !== drag.id
+    )
+    const target = others.filter((row) => {
+      const box = row.getBoundingClientRect()
+      return e.clientY > box.top + box.height / 2
+    }).length
+    setChecklist((c) => {
+      if (!c) return c
+      const from = c.items.findIndex((i) => i.id === drag.id)
+      if (from === target) return c
+      const items = [...c.items]
+      items.splice(target, 0, ...items.splice(from, 1))
+      return { ...c, items }
+    })
+  }
+
+  async function endDrag(cancelled: boolean) {
+    const drag = dragRef.current
+    dragRef.current = null
+    setDraggingId(null)
+    if (drag) listRef.current?.querySelector<HTMLElement>(`[data-item-id="${drag.id}"] > .checklist-item-card`)?.style.removeProperty('transform')
+    if (!drag || !checklist) return
+    const order = checklist.items.map((i) => i.id)
+    const changed = order.some((id, i) => id !== drag.before[i].id)
+    if (cancelled || !changed) {
+      if (cancelled) setChecklist((c) => (c ? { ...c, items: drag.before } : c))
+      return
+    }
+    try {
+      const r = await api.reorderItems(summary.id, order)
+      setChecklist((c) => (c ? { ...c, items: r.items } : c))
+      onChanged()
+    } catch {
+      setChecklist((c) => (c ? { ...c, items: drag.before } : c))
+    }
   }
 
   async function removeChecklist() {
@@ -305,36 +395,40 @@ function ChecklistCard({
           {!checklist ? (
             <p className="muted">Loading…</p>
           ) : (
-            <ul className="checklist-item-list">
-              {checklist.items.map((item, idx) => (
-                <li key={item.id} className="checklist-item-row">
-                  <input
-                    className="checklist-item-text"
-                    value={item.text}
-                    onChange={(e) => setItemTextLocal(item.id, e.target.value)}
-                    onBlur={() => saveItemText(item.id)}
-                    maxLength={500}
-                    readOnly={!canEdit}
-                  />
-                  {canEdit && (
-                    <div className="checklist-item-actions">
-                      <button type="button" className="ghost" onClick={() => moveItem(item.id, 'up')} disabled={idx === 0} aria-label="Move item up">
-                        {icons.up}
-                      </button>
+            <ul className="checklist-item-list" ref={listRef}>
+              {checklist.items.map((item) => (
+                <li
+                  key={item.id}
+                  data-item-id={item.id}
+                  className={`checklist-item-row${draggingId === item.id ? ' dragging' : ''}`}
+                >
+                  <div className="checklist-item-card">
+                    {canEdit && checklist.items.length > 1 && (
                       <button
                         type="button"
-                        className="ghost"
-                        onClick={() => moveItem(item.id, 'down')}
-                        disabled={idx === checklist.items.length - 1}
-                        aria-label="Move item down"
+                        className="ghost checklist-item-grip"
+                        aria-label="Drag to reorder"
+                        onPointerDown={(e) => startDrag(e, item.id)}
                       >
-                        {icons.down}
+                        {icons.grip}
                       </button>
-                      <button type="button" className="ghost" onClick={() => removeItem(item.id)} aria-label="Delete item">
-                        {icons.trash}
-                      </button>
-                    </div>
-                  )}
+                    )}
+                    <input
+                      className="checklist-item-text"
+                      value={item.text}
+                      onChange={(e) => setItemTextLocal(item.id, e.target.value)}
+                      onBlur={() => saveItemText(item.id)}
+                      maxLength={500}
+                      readOnly={!canEdit}
+                    />
+                    {canEdit && (
+                      <div className="checklist-item-actions">
+                        <button type="button" className="ghost" onClick={() => removeItem(item.id)} aria-label="Delete item">
+                          {icons.trash}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </li>
               ))}
               {checklist.items.length === 0 && <li className="muted">No items yet</li>}
