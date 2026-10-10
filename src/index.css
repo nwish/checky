@@ -1305,9 +1305,25 @@ select:focus {
   min-width: 0;
 }
 
-.share-form select {
+.share-form {
+  align-items: flex-start;
+}
+
+.share-field {
   flex: 1 1 0;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.share-field select {
+  width: 100%;
+}
+
+.share-hint {
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .share-form-error {
@@ -1423,16 +1439,6 @@ select:focus {
     grid-column: 3;
     grid-row: 1;
   }
-}
-
-.share-legend {
-  margin: 0;
-  font-size: 0.82rem;
-}
-
-.share-legend strong {
-  font-weight: 600;
-  color: var(--ink);
 }
 
 .run-item:disabled {

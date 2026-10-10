@@ -5,6 +5,16 @@ import Avatar, { personName } from './Avatar'
 const ACCESS_LABEL: Record<SharePermission, string> = { view: 'View items', edit: 'Edit items' }
 const MODE_LABEL: Record<ShareMode, string> = { shared: 'Shared', collaborative: 'Collaborative' }
 
+// What each choice means, shown under the dropdown and as a tooltip on an existing share's dropdown.
+const ACCESS_HINT: Record<SharePermission, string> = {
+  view: 'Can check items and reset the list.',
+  edit: 'Can also add, change and remove items.'
+}
+const MODE_HINT: Record<ShareMode, string> = {
+  shared: 'Runs it on their own, with their own checks and history.',
+  collaborative: 'Works in your live run with you.'
+}
+
 /**
  * Manages shares for one scope: a single checklist, or (checklistId null) all of the
  * owner's lists. `shares` is the owner's full share list; this filters to its scope.
@@ -28,6 +38,7 @@ export default function SharePanel({
   const [error, setError] = useState<string | null>(null)
   const [addError, setAddError] = useState<string | null>(null)
   const addErrorId = useId()
+  const hintId = useId()
   const emailRef = useRef<HTMLInputElement>(null)
   // The most recently removed share, kept briefly so it can be undone.
   const [removed, setRemoved] = useState<Share | null>(null)
@@ -95,6 +106,7 @@ export default function SharePanel({
                   disabled={busy}
                   onChange={(e) => run(() => api.putShare(s.email, e.target.value as SharePermission, s.mode, checklistId))}
                   aria-label={`Item access for ${s.email}`}
+                  title={ACCESS_HINT[s.permission]}
                 >
                   <option value="view">View items</option>
                   <option value="edit">Edit items</option>
@@ -104,6 +116,7 @@ export default function SharePanel({
                   disabled={busy}
                   onChange={(e) => run(() => api.putShare(s.email, s.permission, e.target.value as ShareMode, checklistId))}
                   aria-label={`Run mode for ${s.email}`}
+                  title={MODE_HINT[s.mode]}
                 >
                   <option value="shared">Shared</option>
                   <option value="collaborative">Collaborative</option>
@@ -170,19 +183,27 @@ export default function SharePanel({
             {addError}
           </p>
         )}
-        <select value={permission} onChange={(e) => setPermission(e.target.value as SharePermission)} aria-label="Item access">
-          <option value="view">View items</option>
-          <option value="edit">Edit items</option>
-        </select>
-        <select value={mode} onChange={(e) => setMode(e.target.value as ShareMode)} aria-label="Run mode">
-          <option value="shared">Shared</option>
-          <option value="collaborative">Collaborative</option>
-        </select>
+        <div className="share-field">
+          <select
+            value={permission}
+            onChange={(e) => setPermission(e.target.value as SharePermission)}
+            aria-label="Item access"
+            aria-describedby={`${hintId}-access`}
+          >
+            <option value="view">View items</option>
+            <option value="edit">Edit items</option>
+          </select>
+          <span id={`${hintId}-access`} className="muted share-hint">{ACCESS_HINT[permission]}</span>
+        </div>
+        <div className="share-field">
+          <select value={mode} onChange={(e) => setMode(e.target.value as ShareMode)} aria-label="Run mode" aria-describedby={`${hintId}-mode`}>
+            <option value="shared">Shared</option>
+            <option value="collaborative">Collaborative</option>
+          </select>
+          <span id={`${hintId}-mode`} className="muted share-hint">{MODE_HINT[mode]}</span>
+        </div>
         <button type="submit" disabled={busy}>Share</button>
       </form>
-      <p className="muted share-legend">
-        <strong>Shared:</strong> they run the list with their own checks and history. <strong>Collaborative:</strong> you work in the same live run. “View items” can still check items and reset; “Edit items” can also change the list.
-      </p>
       {error && <p className="error">{error}</p>}
     </div>
   )
