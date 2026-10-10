@@ -189,12 +189,32 @@ function ChecklistCard({
     const list = listRef.current
     if (!drag || !list) return
     const row = list.querySelector<HTMLElement>(`[data-item-id="${drag.id}"]`)
-    if (!row) return
+    const card = row?.firstElementChild as HTMLElement | null
+    if (!row || !card) return
     const dy = drag.pointerY - list.getBoundingClientRect().top - drag.grabOffset - row.offsetTop
-    row.style.transform = `translateY(${dy}px) scale(1.02) rotate(-0.6deg)`
+    card.style.transform = `translateY(${dy}px) scale(1.02) rotate(-0.6deg)`
   }
 
   useLayoutEffect(liftDraggedRow, [checklist?.items])
+
+  // Track the drag on the window, not the handle: reordering moves the handle in the DOM,
+  // which drops pointer capture, so the handle itself would stop receiving move/up events.
+  const dragHandlers = useRef({ move: dragOver, end: endDrag })
+  dragHandlers.current = { move: dragOver, end: endDrag }
+  useEffect(() => {
+    if (draggingId === null) return
+    const move = (e: PointerEvent) => dragHandlers.current.move(e)
+    const up = () => dragHandlers.current.end(false)
+    const cancel = () => dragHandlers.current.end(true)
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', cancel)
+    return () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', cancel)
+    }
+  }, [draggingId])
 
   useEffect(() => {
     setTitleDraft(summary.title)
@@ -268,7 +288,7 @@ function ChecklistCard({
     setDraggingId(itemId)
   }
 
-  function dragOver(e: React.PointerEvent<HTMLButtonElement>) {
+  function dragOver(e: { clientY: number }) {
     const drag = dragRef.current
     if (!drag || !listRef.current) return
     drag.pointerY = e.clientY
@@ -294,7 +314,7 @@ function ChecklistCard({
     const drag = dragRef.current
     dragRef.current = null
     setDraggingId(null)
-    if (drag) listRef.current?.querySelector<HTMLElement>(`[data-item-id="${drag.id}"]`)?.style.removeProperty('transform')
+    if (drag) listRef.current?.querySelector<HTMLElement>(`[data-item-id="${drag.id}"] > .checklist-item-card`)?.style.removeProperty('transform')
     if (!drag || !checklist) return
     const order = checklist.items.map((i) => i.id)
     const changed = order.some((id, i) => id !== drag.before[i].id)
@@ -363,46 +383,45 @@ function ChecklistCard({
                   data-item-id={item.id}
                   className={`checklist-item-row${draggingId === item.id ? ' dragging' : ''}`}
                 >
-                  {canEdit && checklist.items.length > 1 && (
-                    <button
-                      type="button"
-                      className="ghost checklist-item-grip"
-                      aria-label="Drag to reorder"
-                      onPointerDown={(e) => startDrag(e, item.id)}
-                      onPointerMove={dragOver}
-                      onPointerUp={() => endDrag(false)}
-                      onPointerCancel={() => endDrag(true)}
-                    >
-                      {icons.grip}
-                    </button>
-                  )}
-                  <input
-                    className="checklist-item-text"
-                    value={item.text}
-                    onChange={(e) => setItemTextLocal(item.id, e.target.value)}
-                    onBlur={() => saveItemText(item.id)}
-                    maxLength={500}
-                    readOnly={!canEdit}
-                  />
-                  {canEdit && (
-                    <div className="checklist-item-actions">
-                      <button type="button" className="ghost" onClick={() => moveItem(item.id, 'up')} disabled={idx === 0} aria-label="Move item up">
-                        {icons.up}
-                      </button>
+                  <div className="checklist-item-card">
+                    {canEdit && checklist.items.length > 1 && (
                       <button
                         type="button"
-                        className="ghost"
-                        onClick={() => moveItem(item.id, 'down')}
-                        disabled={idx === checklist.items.length - 1}
-                        aria-label="Move item down"
+                        className="ghost checklist-item-grip"
+                        aria-label="Drag to reorder"
+                        onPointerDown={(e) => startDrag(e, item.id)}
                       >
-                        {icons.down}
+                        {icons.grip}
                       </button>
-                      <button type="button" className="ghost" onClick={() => removeItem(item.id)} aria-label="Delete item">
-                        {icons.trash}
-                      </button>
-                    </div>
-                  )}
+                    )}
+                    <input
+                      className="checklist-item-text"
+                      value={item.text}
+                      onChange={(e) => setItemTextLocal(item.id, e.target.value)}
+                      onBlur={() => saveItemText(item.id)}
+                      maxLength={500}
+                      readOnly={!canEdit}
+                    />
+                    {canEdit && (
+                      <div className="checklist-item-actions">
+                        <button type="button" className="ghost" onClick={() => moveItem(item.id, 'up')} disabled={idx === 0} aria-label="Move item up">
+                          {icons.up}
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={() => moveItem(item.id, 'down')}
+                          disabled={idx === checklist.items.length - 1}
+                          aria-label="Move item down"
+                        >
+                          {icons.down}
+                        </button>
+                        <button type="button" className="ghost" onClick={() => removeItem(item.id)} aria-label="Delete item">
+                          {icons.trash}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </li>
               ))}
               {checklist.items.length === 0 && <li className="muted">No items yet</li>}

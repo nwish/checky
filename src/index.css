@@ -1070,7 +1070,7 @@ button.link:active {
   position: relative;
 }
 
-.checklist-item-row {
+.checklist-item-card {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1151,13 +1151,18 @@ button.link:active {
   height: 15px;
 }
 
-/* While grabbed the row floats above the list (JS applies the transform to track the
-   pointer); its in-flow slot stays behind as a gap showing where it will land. */
-.checklist-item-row {
+/* While grabbed the card floats above the list (JS applies the transform to track the
+   pointer); its in-flow slot stays behind as a dashed outline showing where it will land. */
+.checklist-item-card {
   transition: box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 .checklist-item-row.dragging {
+  outline: 2px dashed var(--key-border);
+  border-radius: var(--radius-sm);
+}
+
+.checklist-item-row.dragging .checklist-item-card {
   position: relative;
   z-index: 10;
   transition: none;
