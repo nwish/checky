@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { api, type Checklist, type ChecklistItem, type ChecklistSummary, type Share } from './api'
 import { ownerLabel } from './Avatar'
 import IconPicker from './IconPicker'
+import Modal from './Modal'
 import SharePanel from './SharePanel'
 import { checklistIcon, DEFAULT_CHECKLIST_ICON } from './icons'
 
@@ -19,6 +20,25 @@ const icons = {
       <circle cx="15" cy="12" r="1.6" />
       <circle cx="9" cy="18" r="1.6" />
       <circle cx="15" cy="18" r="1.6" />
+  share: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+    </svg>
+  ),
+  up: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 19V5" />
+      <path d="m5 12 7-7 7 7" />
+    </svg>
+  ),
+  down: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 5v14" />
+      <path d="m19 12-7 7-7-7" />
     </svg>
   ),
   trash: (
@@ -32,7 +52,7 @@ const icons = {
   )
 }
 
-export default function ChecklistsPage() {
+export default function ChecklistsPage({ navigate }: { navigate: (to: string) => void }) {
   const [checklists, setChecklists] = useState<ChecklistSummary[] | null>(null)
   const [shares, setShares] = useState<Share[]>([])
   const [expandedId, setExpandedId] = useState<number | null>(null)
@@ -129,6 +149,7 @@ export default function ChecklistsPage() {
               key={summary.id}
               summary={summary}
               shares={shares}
+              onManageAll={() => navigate('/settings')}
               expanded={expandedId === summary.id}
               onToggle={() => setExpandedId(expandedId === summary.id ? null : summary.id)}
               onDeleted={handleDeleted}
@@ -145,6 +166,7 @@ export default function ChecklistsPage() {
 function ChecklistCard({
   summary,
   shares,
+  onManageAll,
   expanded,
   onToggle,
   onDeleted,
@@ -158,6 +180,7 @@ function ChecklistCard({
   onDeleted: (id: number) => void
   onDuplicated: (id: number) => void
   onChanged: () => void
+  onManageAll: () => void
 }) {
   const isOwner = summary.access === 'owner'
   const canEdit = summary.access !== 'view'
@@ -203,6 +226,7 @@ function ChecklistCard({
       window.removeEventListener('pointercancel', cancel)
     }
   }, [draggingId])
+  const [sharing, setSharing] = useState(false)
 
   useEffect(() => {
     setTitleDraft(summary.title)
@@ -325,16 +349,38 @@ function ChecklistCard({
   }
 
   const HeaderIcon = checklistIcon(summary.icon)
+  // People with access to this list: shared on it directly, or through "Share all lists".
+  const sharedWith = new Set(shares.filter((s) => s.checklistId === summary.id || s.checklistId === null).map((s) => s.email)).size
 
   return (
     <div className="checklist-card">
-      <button type="button" className={`checklist-card-header${expanded ? ' open' : ''}`} onClick={onToggle}>
-        <span className="checklist-card-icon"><HeaderIcon /></span>
-        <span className="checklist-card-title">{summary.title}</span>
-        {!isOwner && <span className="checklist-card-meta share-owner">from {ownerLabel(summary)}</span>}
+      <div className={`checklist-card-header${expanded ? ' open' : ''}`} onClick={onToggle}>
+        {/* The toggle button gives keyboard users a focus target; a mouse click anywhere on the
+            row (including the count and chevron) reaches the row's onClick through bubbling. */}
+        <button type="button" className="checklist-card-toggle" aria-expanded={expanded}>
+          <span className="checklist-card-icon"><HeaderIcon /></span>
+          <span className="checklist-card-title">{summary.title}</span>
+          {!isOwner && <span className="checklist-card-meta share-owner">from {ownerLabel(summary)}</span>}
+        </button>
         <span className="checklist-card-meta">{summary.checkedCount}/{summary.itemCount}</span>
+        {isOwner && (
+          <button
+            type="button"
+            className="checklist-card-share"
+            aria-haspopup="dialog"
+            aria-label={sharedWith === 0 ? 'Share this list' : `Shared with ${sharedWith} ${sharedWith === 1 ? 'person' : 'people'}`}
+            title={sharedWith === 0 ? 'Share this list' : `Shared with ${sharedWith} ${sharedWith === 1 ? 'person' : 'people'}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              setSharing(true)
+            }}
+          >
+            {icons.share}
+            {sharedWith > 0 && <span className="checklist-card-share-count">{sharedWith}</span>}
+          </button>
+        )}
         <span className="checklist-card-chevron">{icons.chevron}</span>
-      </button>
+      </div>
 
       {expanded && (
         <div className="checklist-card-body">
@@ -406,13 +452,6 @@ function ChecklistCard({
             </form>
           )}
 
-          {isOwner && (
-            <div className="share-section">
-              <h4>Share this list</h4>
-              <SharePanel checklistId={summary.id} shares={shares} onChanged={onChanged} />
-            </div>
-          )}
-
           <div className="checklist-card-actions">
             <button type="button" className="ghost" onClick={duplicateChecklist}>
               Duplicate
@@ -425,6 +464,12 @@ function ChecklistCard({
             )}
           </div>
         </div>
+      )}
+
+      {sharing && (
+        <Modal title={`Share “${summary.title}”`} onClose={() => setSharing(false)} className="share-modal">
+          <SharePanel checklistId={summary.id} shares={shares} onChanged={onChanged} onManageAll={onManageAll} />
+        </Modal>
       )}
     </div>
   )

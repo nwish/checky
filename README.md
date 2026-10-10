@@ -1,10 +1,34 @@
 # Rerun
 
+Life repeats. Your checklists should too. 🔁
+Create it once. Check it off. Reset. Rerun.
+
 Rerun turns repeatable activities into checklists. Build a list for each thing you do more than once — kayaking, road trips, campouts, yard work — then keep it exactly the way you want it.
 
 Going kayaking? Open the kayaking list, run through it top to bottom, and go kayaking. Reset the list and it's ready for next time.
 
 Local and self-hosted: everything lives on your machine in a SQLite file. No cloud account, no sync, no subscription.
+
+[![CI](https://img.shields.io/github/actions/workflow/status/nwish/rerun/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/nwish/rerun/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/nwish/rerun?style=flat-square&label=Release)](https://github.com/nwish/rerun/releases)
+[![Docker Publish](https://img.shields.io/github/actions/workflow/status/nwish/rerun/publish.yml?style=flat-square&label=Docker%20Publish)](https://github.com/nwish/rerun/actions/workflows/publish.yml)
+[![License](https://img.shields.io/github/license/nwish/rerun?style=flat-square)](https://github.com/nwish/rerun/blob/main/LICENSE)
+[![Stars](https://img.shields.io/github/stars/nwish/rerun?style=flat-square)](https://github.com/nwish/rerun/stargazers)
+[![Last Commit](https://img.shields.io/github/last-commit/nwish/rerun?style=flat-square)](https://github.com/nwish/rerun/commits/main)
+
+
+## 🔁 Things You Can Rerun
+
+A few things worth checking twice (or a hundred times).
+
+| | Checklist | Why? |
+|:---:|---|---|
+| 🚣 | **Kayaking** | Paddle? Check. Kayak? Hopefully. |
+| 🏕️ | **Camping** | Because forgetting tent stakes once is enough. |
+| 🚙 | **Road Trips** | One checklist, a hundred adventures. |
+| 🏠 | **Home Projects** | For those jobs you'll definitely do again. |
+| 🧳 | **Travel Packing** | Your passport would appreciate being remembered. |
+| 🔧 | **Maintenance** | Oil changes, seasonal chores, and everything in between. |
 
 ## Stack
 
@@ -14,6 +38,16 @@ Local and self-hosted: everything lives on your machine in a SQLite file. No clo
 | Frontend  | React 18, Vite, TypeScript                                   |
 | Database  | SQLite via `better-sqlite3` (WAL mode)                       |
 | Auth      | PBKDF2 password hashing, server-side sessions in SQLite      |
+
+Compliments of Claude, ChatGPT/Codex, Qwen3.8-Flash-Next, and a touch.. and I do mean like a super, duper tiny touch, of my own development experience. 
+
+![Node.js](https://img.shields.io/badge/Node.js-24-339933?style=flat-square&logo=nodedotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-18-149ECA?style=flat-square&logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
+![Self Hosted](https://img.shields.io/badge/Self--Hosted-Ready-2ea44f?style=flat-square&logo=serverfault&logoColor=white)
+
 
 ## Requirements
 
@@ -161,8 +195,12 @@ docker compose up -d --build    # or build from source (uses docker/Dockerfile)
 └── data/            SQLite files (created at runtime)
 ```
 
-## Development notes
 
-- Frontend TS is checked with `npm run typecheck`; Vite transpiles via esbuild (no type emit).
-- The dark theme lives in CSS variables at the top of `src/index.css` — tweak `--bg`, `--accent`, etc. there.
-- The API listens on `3001` by default because `3000` was occupied on this machine; use `PORT=… npm start` (or `dev`) to pick another.
+<details>
+<summary>🦝 What happens if I forget something?</summary>
+
+That's between you and your checklist.
+
+Rerun tried to warn you. 😎
+
+</details>

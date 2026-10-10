@@ -1015,6 +1015,64 @@ button.link:active {
   box-shadow: none;
 }
 
+.checklist-card-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.checklist-card-toggle:hover,
+.checklist-card-toggle:active {
+  background: none;
+  transform: none;
+  box-shadow: none;
+}
+
+.checklist-card-share {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  background: none;
+  border: none;
+  box-shadow: none;
+  border-radius: var(--radius-sm);
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.checklist-card-share:hover,
+.checklist-card-share:active {
+  background: var(--chassis);
+  color: var(--ink);
+  transform: none;
+  box-shadow: none;
+}
+
+.checklist-card-share svg {
+  width: 16px;
+  height: 16px;
+}
+
+.checklist-card-share-count {
+  color: var(--status);
+}
+
 .checklist-card-title {
   flex: 1;
   min-width: 0;
@@ -1262,23 +1320,6 @@ select:focus {
   margin: 12px 0 0;
 }
 
-.share-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 12px;
-}
-
-.share-section h4 {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--legend);
-}
-
 .share-panel {
   display: flex;
   flex-direction: column;
@@ -1316,18 +1357,144 @@ select:focus {
 }
 
 .share-form input {
-  flex: 1 1 120px;
+  flex: 1 1 100%;
   min-width: 0;
 }
 
-.share-legend {
+.share-form {
+  align-items: flex-start;
+}
+
+.share-field {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.share-field select {
+  width: 100%;
+}
+
+.share-hint {
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.share-form-error {
+  flex: 1 1 100%;
+}
+
+.share-undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   margin: 0;
+  padding: 6px 6px 6px 12px;
+  background: var(--chassis);
+  border: 1px solid var(--key-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  animation: run-reset-notice-in 0.2s ease-out;
+}
+
+.share-undo button.link {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 5px 10px;
   font-size: 0.82rem;
 }
 
-.share-legend strong {
-  font-weight: 600;
-  color: var(--ink);
+.share-inherited {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.share-inherited-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.share-inherited-header button.link {
+  margin: 0;
+  white-space: nowrap;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+}
+
+.share-access-text {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.share-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border: 1px solid var(--key-border);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--legend);
+}
+
+.share-access {
+  display: flex;
+  gap: 8px;
+}
+
+/* Narrow screens: each person becomes a small card — name and Remove on top, the two dropdowns
+   side by side below — and the Share button gets its own full-width row. */
+@media (max-width: 640px) {
+  .share-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding: 10px;
+    background: var(--chassis);
+    border: 1px solid var(--key-border);
+    border-radius: var(--radius-sm);
+  }
+
+  .share-row > button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .share-access {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .share-access select {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .share-access select,
+  .share-form select {
+    padding: 9px 4px 9px 9px;
+    font-size: 0.88rem;
+  }
+
+  .share-form button[type='submit'] {
+    flex: 1 1 100%;
+  }
+
+  .share-row-inherited .share-access-text {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .share-row-inherited .share-badge {
+    grid-column: 3;
+    grid-row: 1;
+  }
 }
 
 .run-item:disabled {
@@ -1813,7 +1980,7 @@ select:focus {
   box-shadow: var(--shadow-key-pressed);
 }
 
-.icon-modal-backdrop {
+.modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 50;
@@ -1826,7 +1993,7 @@ select:focus {
   cursor: pointer;
 }
 
-.icon-modal {
+.modal {
   width: 100%;
   max-width: 420px;
   max-height: 80vh;
@@ -1839,7 +2006,11 @@ select:focus {
   cursor: auto;
 }
 
-.icon-modal-header {
+.share-modal {
+  max-width: 600px;
+}
+
+.modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1847,11 +2018,11 @@ select:focus {
   margin-bottom: 14px;
 }
 
-.icon-modal-header h2 {
+.modal-header h2 {
   margin: 0;
 }
 
-.icon-modal-close {
+.modal-close {
   flex-shrink: 0;
   display: flex;
   padding: 7px;
@@ -1863,19 +2034,19 @@ select:focus {
   transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, background 0.08s ease-out, color 0.08s ease-out;
 }
 
-.icon-modal-close svg {
+.modal-close svg {
   width: 16px;
   height: 16px;
 }
 
-.icon-modal-close:hover {
+.modal-close:hover {
   background: var(--key-hover);
   color: var(--ink);
   box-shadow: var(--shadow-key-hover);
   transform: translateY(-1px);
 }
 
-.icon-modal-close:active {
+.modal-close:active {
   transform: translateY(1px);
   box-shadow: var(--shadow-key-pressed);
 }
