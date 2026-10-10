@@ -712,6 +712,81 @@ button.link:active {
 .settings-signout:hover {
   color: var(--danger);
 }
+
+.registration-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  align-self: flex-start;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.94rem;
+  letter-spacing: normal;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.registration-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.registration-switch {
+  flex-shrink: 0;
+  width: 42px;
+  height: 24px;
+  padding: 3px;
+  background: var(--key-border-strong);
+  border: 1px solid var(--key-border);
+  border-radius: 999px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: background 0.15s ease-out, border-color 0.15s ease-out;
+}
+
+.registration-switch::after {
+  content: '';
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: var(--panel);
+  border-radius: 50%;
+  box-shadow: var(--shadow-key-rest);
+  transition: transform 0.15s ease-out;
+}
+
+.registration-toggle input:checked + .registration-switch {
+  background: var(--action);
+  border-color: color-mix(in srgb, var(--action) 70%, black);
+}
+
+.registration-toggle input:checked + .registration-switch::after {
+  transform: translateX(18px);
+}
+
+.registration-toggle input:focus-visible + .registration-switch {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.registration-toggle input:disabled + .registration-switch {
+  opacity: 0.55;
+}
+
+.registration-toggle:has(input:disabled) {
+  cursor: default;
+}
+
+.registration-state {
+  color: var(--status);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 /* ---- Dashboard: the instrument panel ---- */
 
 .empty-state {
