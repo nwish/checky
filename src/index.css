@@ -947,13 +947,19 @@ button.link:active {
 
 .checklist-new-card {
   max-width: none;
+  gap: 8px;
+}
+
+.checklist-new-card > h2,
+.checklist-new-card > p {
+  margin: 0;
 }
 
 .checklist-new-form {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 1rem;
+  margin-top: 0;
 }
 
 .checklist-new-fields {
