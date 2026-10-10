@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, type Checklist, type ChecklistSummary } from './api'
+import { api, type Checklist, type ChecklistSummary, type Share } from './api'
 import { useLiveRun } from './useLive'
 import Avatar, { ownerLabel, personName } from './Avatar'
 import { checklistIcon } from './icons'
@@ -40,19 +40,30 @@ const icons = {
       <path d="M3 12a9 9 0 1 0 3-6.7" />
       <path d="M3 4v5h5" />
     </svg>
+  ),
+  share: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+    </svg>
   )
 }
 
 export default function DashboardPage({ navigate, email }: { navigate: (to: string) => void; email: string }) {
   const [summaries, setSummaries] = useState<ChecklistSummary[] | null>(null)
+  const [shares, setShares] = useState<Share[]>([])
   const [activeId, setActiveId] = useState<number | null>(null)
   const [checklist, setChecklist] = useState<Checklist | null>(null)
   const [resetNotice, setResetNotice] = useState<{ checked: number; total: number } | null>(null)
   const [showLive, setShowLive] = useState(false)
 
   useEffect(() => {
-    api.checklists().then((r) => {
+    Promise.all([api.checklists(), api.shares()]).then(([r, granted]) => {
       setSummaries(r.checklists)
+      setShares(granted.shares)
       const lastId = Number(window.localStorage.getItem(LAST_CHECKLIST_KEY))
       if (lastId && r.checklists.some((c) => c.id === lastId)) {
         setActiveId(lastId)
@@ -78,6 +89,7 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
   useEffect(() => {
     function refresh() {
       api.checklists().then((r) => setSummaries(r.checklists))
+      api.shares().then((r) => setShares(r.shares))
       if (activeId !== null) reloadChecklist(activeId)
     }
     window.addEventListener('focus', refresh)
@@ -185,11 +197,18 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
         <div className="checklist-list">
           {summaries.map((s) => {
             const Icon = checklistIcon(s.icon)
+            const sharedWith = new Set(shares.filter((share) => share.checklistId === s.id || share.checklistId === null).map((share) => share.email)).size
             return (
               <button key={s.id} type="button" className="checklist-pick-card" onClick={() => setActiveId(s.id)}>
                 <span className="checklist-card-icon"><Icon /></span>
                 <span className="checklist-card-title">{s.title}</span>
                 {s.access !== 'owner' && <span className="checklist-card-meta share-owner">from {ownerLabel(s)}</span>}
+                {sharedWith > 0 && (
+                  <span className="checklist-pick-share" aria-label={`Shared with ${sharedWith} ${sharedWith === 1 ? 'person' : 'people'}`} title={`Shared with ${sharedWith} ${sharedWith === 1 ? 'person' : 'people'}`}>
+                    {icons.share}
+                    <span>{sharedWith}</span>
+                  </span>
+                )}
                 {s.liveInvite && <span className="run-invite-tag">Live run invite</span>}
                 {s.liveRequests > 0 && <span className="run-invite-tag">{s.liveRequests} want to run together</span>}
                 <span className="checklist-card-meta">{s.checkedCount}/{s.itemCount}</span>
