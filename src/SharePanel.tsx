@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { api, type Share, type SharePermission, type ShareMode } from './api'
 import Avatar, { personName } from './Avatar'
 
@@ -22,6 +22,7 @@ export default function SharePanel({
   const [error, setError] = useState<string | null>(null)
   const [addError, setAddError] = useState<string | null>(null)
   const addErrorId = useId()
+  const emailRef = useRef<HTMLInputElement>(null)
   // The most recently removed share, kept briefly so it can be undone.
   const [removed, setRemoved] = useState<Share | null>(null)
 
@@ -55,7 +56,11 @@ export default function SharePanel({
     e.preventDefault()
     const target = email.trim()
     if (!target) return
-    if (await run(() => api.putShare(target, permission, mode, checklistId), setAddError)) setEmail('')
+    const added = await run(() => api.putShare(target, permission, mode, checklistId), setAddError)
+    if (added) setEmail('')
+    // Back to the field either way: the Share button was disabled while busy, which dropped focus,
+    // and the next step is another person (or fixing the email).
+    emailRef.current?.focus()
   }
 
   async function remove(share: Share) {
@@ -121,6 +126,7 @@ export default function SharePanel({
 
       <form onSubmit={add} className="share-form">
         <input
+          ref={emailRef}
           type="email"
           value={email}
           onChange={(e) => {
