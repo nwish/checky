@@ -65,6 +65,7 @@ export default function App() {
       user={state.user}
       path={activePath}
       navigate={navigate}
+      onSignOut={signOut}
       title={titles[activePath].title}
       subtitle={titles[activePath].subtitle}
     >
