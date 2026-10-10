@@ -198,5 +198,33 @@ export const migrations: Migration[] = [
         ALTER TABLE users ADD COLUMN avatar TEXT;
       `)
     }
+  },
+  {
+    version: 4,
+    name: 'live run members (per-run collaboration on shared lists)',
+    // Someone with a 'shared'-mode share runs the list on their own. The owner can invite them
+    // into one live run of it: a row here is the invitation, joined_at is set once they accept,
+    // and the rows go when that run ends (reset) or the owner ends it.
+    up(db) {
+      db.exec(`
+        CREATE TABLE live_run_members (
+          checklist_id INTEGER NOT NULL REFERENCES checklists(id) ON DELETE CASCADE,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          invited_at TEXT NOT NULL DEFAULT (datetime('now')),
+          joined_at TEXT,
+          PRIMARY KEY (checklist_id, user_id)
+        );
+        CREATE INDEX idx_live_run_members_user ON live_run_members(user_id);
+      `)
+    }
+  },
+  {
+    version: 5,
+    name: 'live run requests (a shared-mode person asks to run together)',
+    // requested = 1 marks a row the person created by asking the owner to run together; it is
+    // accepted by the owner. requested = 0 is an owner's invitation, accepted by the invitee.
+    up(db) {
+      db.exec(`ALTER TABLE live_run_members ADD COLUMN requested INTEGER NOT NULL DEFAULT 0;`)
+    }
   }
 ]

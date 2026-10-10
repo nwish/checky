@@ -35,6 +35,11 @@ export type ChecklistSummary = {
   ownerEmail: string
   ownerName: string | null
   ownerAvatar: string | null
+  liveInvite: boolean
+  liveJoined: boolean
+  liveRequested: boolean
+  liveRequests: number
+  liveWith: number
   itemCount: number
   checkedCount: number
 }
@@ -48,10 +53,25 @@ export type Checklist = {
   ownerEmail: string
   ownerName: string | null
   ownerAvatar: string | null
+  /** An owner has invited you into a live run of this list that you haven't joined. */
+  liveInvite: boolean
+  /** You're in the common run because you accepted an invitation (and can leave it). */
+  liveJoined: boolean
+  /** You asked to run this list together and the owner hasn't answered yet. */
+  liveRequested: boolean
+  /** For the owner: people waiting for an answer to a request to run together. */
+  liveRequests: number
+  /** How many others are in the common run you're working in; 0 when you run it on your own. */
+  liveWith: number
   items: ChecklistItem[]
 }
 /** A share the current user has granted. checklistId null means "all my lists". */
 export type Share = Person & { id: number; permission: SharePermission; mode: ShareMode; checklistId: number | null }
+
+/** Where someone you've shared a list with stands in the list's current live run. */
+export type LiveState = 'none' | 'invited' | 'requested' | 'joined'
+/** mode 'collaborative' people are always in the run; only 'shared' people can be invited into it. */
+export type LivePerson = Person & { mode: ShareMode; state: LiveState }
 
 export type HistoryRun = {
   id: number
@@ -138,6 +158,16 @@ export const api = {
       `/api/checklists/${id}/items/reorder`,
       json('POST', `/api/checklists/${id}/items/reorder`, { order })
     ),
+
+  liveRun: (id: number) => request<{ people: LivePerson[] }>(`/api/checklists/${id}/live`),
+  setLiveRun: (id: number, emails: string[]) =>
+    request<{ people: LivePerson[] }>(`/api/checklists/${id}/live`, json('PUT', `/api/checklists/${id}/live`, { emails })),
+  endLiveRun: (id: number) => request<{ people: LivePerson[] }>(`/api/checklists/${id}/live`, { method: 'DELETE' }),
+  joinLiveRun: (id: number) => request<{ ok: boolean }>(`/api/checklists/${id}/live/join`, { method: 'POST' }),
+  leaveLiveRun: (id: number) => request<{ ok: boolean }>(`/api/checklists/${id}/live/leave`, { method: 'POST' }),
+  requestLiveRun: (id: number) => request<{ ok: boolean }>(`/api/checklists/${id}/live/request`, { method: 'POST' }),
+  respondLiveRequest: (id: number, email: string, accept: boolean) =>
+    request<{ people: LivePerson[] }>(`/api/checklists/${id}/live/respond`, json('POST', `/api/checklists/${id}/live/respond`, { email, accept })),
 
   shares: () => request<{ shares: Share[] }>('/api/shares'),
   putShare: (email: string, permission: SharePermission, mode: ShareMode, checklistId: number | null) =>
