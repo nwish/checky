@@ -126,9 +126,8 @@ export default function AdminPage() {
                   <Avatar person={u} />
                   <div className="user-meta">
                     <span className="user-email">{personName(u)}</span>
-                    <span className="muted">
-                      {u.name ? `${u.email} · ` : ''}Joined {u.activated_at ? new Date(u.activated_at).toLocaleDateString() : u.created_at.slice(0, 10)}
-                    </span>
+                    {u.name && <span className="user-submeta" title={u.email}>{u.email}</span>}
+                    <span className="muted user-submeta">Joined {u.activated_at ? new Date(u.activated_at).toLocaleDateString() : u.created_at.slice(0, 10)}</span>
                   </div>
                   <span className={u.role === 'admin' ? 'badge badge-admin' : 'badge'}>{u.role}</span>
                 </li>
