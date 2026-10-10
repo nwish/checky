@@ -16,6 +16,20 @@ Local and self-hosted: everything lives on your machine in a SQLite file. No clo
 [![Stars](https://img.shields.io/github/stars/nwish/rerun?style=flat-square)](https://github.com/nwish/rerun/stargazers)
 [![Last Commit](https://img.shields.io/github/last-commit/nwish/rerun?style=flat-square)](https://github.com/nwish/rerun/commits/main)
 
+
+## 🔁 Things You Can Rerun
+
+A few things worth checking twice (or a hundred times).
+
+| | Checklist | Why? |
+|:---:|---|---|
+| 🚣 | **Kayaking** | Paddle? Check. Kayak? Hopefully. |
+| 🏕️ | **Camping** | Because forgetting tent stakes once is enough. |
+| 🚙 | **Road Trips** | One checklist, a hundred adventures. |
+| 🏠 | **Home Projects** | For those jobs you'll definitely do again. |
+| 🧳 | **Travel Packing** | Your passport would appreciate being remembered. |
+| 🔧 | **Maintenance** | Oil changes, seasonal chores, and everything in between. |
+
 ## Stack
 
 | Layer     | Tech                                                        |
