@@ -60,6 +60,13 @@ const icons = {
       <line x1="6" y1="6" x2="18" y2="18" />
       <line x1="18" y1="6" x2="6" y2="18" />
     </svg>
+  ),
+  signOut: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 17l5-5-5-5" />
+      <path d="M15 12H3" />
+      <path d="M21 4v16" />
+    </svg>
   )
 }
 
@@ -69,6 +76,7 @@ export default function AppShell({
   user,
   path,
   navigate,
+  onSignOut,
   title,
   subtitle,
   children
@@ -76,6 +84,7 @@ export default function AppShell({
   user: Me
   path: string
   navigate: (to: string) => void
+  onSignOut: () => void
   title: string
   subtitle?: string
   children: ReactNode
@@ -142,16 +151,22 @@ export default function AppShell({
       </main>
 
       <div className="app-nav-foot">
-        <button
-          type="button"
-          className={`nav-link nav-user${path === '/settings' ? ' active' : ''}`}
-          onClick={() => go('/settings')}
-          title="Settings"
-          aria-label={`Settings — signed in as ${user.email}`}
-        >
-          <Avatar person={user} />
-          <span className="email">{personName(user)}</span>
-        </button>
+        <div className="nav-user-card">
+          <button
+            type="button"
+            className={`nav-link nav-user${path === '/settings' ? ' active' : ''}`}
+            onClick={() => go('/settings')}
+            title="Settings"
+            aria-label={`Settings — signed in as ${user.email}`}
+          >
+            <Avatar person={user} />
+            <span className="email">{personName(user)}</span>
+          </button>
+          <button type="button" className="nav-signout" onClick={onSignOut} title="Sign out">
+            {icons.signOut}
+            <span>Sign out</span>
+          </button>
+        </div>
       </div>
     </div>
   )
