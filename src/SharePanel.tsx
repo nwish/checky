@@ -39,6 +39,7 @@ export default function SharePanel({
   const [addError, setAddError] = useState<string | null>(null)
   const addErrorId = useId()
   const hintId = useId()
+  const suggestId = useId()
   const emailRef = useRef<HTMLInputElement>(null)
   // The most recently removed share, kept briefly so it can be undone.
   const [removed, setRemoved] = useState<Share | null>(null)
@@ -52,6 +53,9 @@ export default function SharePanel({
   const scoped = shares.filter((s) => s.checklistId === checklistId)
   // For a single list, other people may also have access through "share all".
   const inherited = checklistId === null ? [] : shares.filter((s) => s.checklistId === null && !scoped.some((p) => p.email === s.email))
+  // Suggest people already shared with elsewhere (any list, or all lists) who aren't in this scope yet.
+  // Only people the owner has already shared with, so this can't be used to probe which emails have accounts.
+  const suggestions = Array.from(new Map(shares.filter((s) => !scoped.some((p) => p.email === s.email)).map((s) => [s.email, s])).values())
 
   // Failures of the add form show under the email field (setAddError); other actions use the panel-level error.
   async function run(action: () => Promise<unknown>, setFailure: (message: string | null) => void = setError) {
@@ -177,7 +181,13 @@ export default function SharePanel({
           aria-label="Email to share with"
           aria-invalid={addError !== null}
           aria-describedby={addError ? addErrorId : undefined}
+          list={suggestId}
         />
+        <datalist id={suggestId}>
+          {suggestions.map((s) => (
+            <option key={s.email} value={s.email} label={s.name ?? undefined} />
+          ))}
+        </datalist>
         {addError && (
           <p id={addErrorId} className="error share-form-error" role="alert">
             {addError}
