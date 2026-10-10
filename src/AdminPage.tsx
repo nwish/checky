@@ -108,9 +108,11 @@ export default function AdminPage() {
           <section className="card">
             <h2>Registration</h2>
             <p className="muted">
-              {registrationOpen
-                ? 'Open: anyone who can reach this page can create an account without an invitation. New accounts get the user role.'
-                : 'Closed: new people join only by invitation.'}
+              {registrationOpen === null
+                ? 'Loading…'
+                : registrationOpen
+                  ? 'Open: anyone who can reach this page can create an account without an invitation. New accounts get the user role.'
+                  : 'Closed: new people join only by invitation.'}
             </p>
             {settingError && <p className="error">{settingError}</p>}
             <label className="registration-toggle">
@@ -122,7 +124,6 @@ export default function AdminPage() {
               />
               <span className="registration-switch" aria-hidden="true" />
               <span>Open registration</span>
-              <span className="registration-state">{registrationOpen === null ? 'Loading…' : registrationOpen ? 'Open' : 'Closed'}</span>
             </label>
           </section>
         </div>

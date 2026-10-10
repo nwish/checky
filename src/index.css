@@ -714,10 +714,12 @@ button.link:active {
 }
 
 .registration-toggle {
-  display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 9px;
-  align-self: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--key-border);
   color: var(--ink);
   font-family: var(--font-body);
   font-size: 0.94rem;
@@ -736,6 +738,7 @@ button.link:active {
 }
 
 .registration-switch {
+  order: 1;
   flex-shrink: 0;
   width: 42px;
   height: 24px;
@@ -778,14 +781,6 @@ button.link:active {
 
 .registration-toggle:has(input:disabled) {
   cursor: default;
-}
-
-.registration-state {
-  color: var(--status);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 /* ---- Dashboard: the instrument panel ---- */
 
