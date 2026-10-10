@@ -171,7 +171,15 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
         <div className="run-header-title">
           <span className="checklist-card-icon run-header-icon"><TitleIcon /></span>
           <div>
-            <h2>{checklist.title}</h2>
+            <div className="run-title-row">
+              <h2>{checklist.title}</h2>
+              {checklist.liveWith > 0 && (
+                <span className="run-live-badge" title="Everyone in this live run sees and changes the same checks">
+                  <span className="run-live-dot" aria-hidden="true" />
+                  Live · {checklist.liveWith + 1} people
+                </span>
+              )}
+            </div>
             <p className="muted">
               {done}/{total} checked
               {checklist.access !== 'owner' && ` · from ${ownerLabel(checklist)} · ${checklist.scope === 'common' ? 'live run together' : 'your own run'}`}
@@ -190,7 +198,13 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
           </div>
         </div>
         <div className="run-header-actions">
-          <button type="button" className="ghost" onClick={resetChecklist} disabled={done === 0} title="Save this run to History and clear the checks">
+          <button
+            type="button"
+            className="ghost"
+            onClick={resetChecklist}
+            disabled={done === 0}
+            title={checklist.liveWith > 0 ? 'Save this run to History and clear the checks for everyone in it' : 'Save this run to History and clear the checks'}
+          >
             {icons.reset}
             Reset
           </button>

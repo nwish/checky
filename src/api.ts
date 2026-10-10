@@ -35,6 +35,8 @@ export type ChecklistSummary = {
   ownerEmail: string
   ownerName: string | null
   ownerAvatar: string | null
+  liveInvite: boolean
+  liveWith: number
   itemCount: number
   checkedCount: number
 }
@@ -48,6 +50,10 @@ export type Checklist = {
   ownerEmail: string
   ownerName: string | null
   ownerAvatar: string | null
+  /** An owner has invited you into a live run of this list that you haven't joined. */
+  liveInvite: boolean
+  /** How many others are in the common run you're working in; 0 when you run it on your own. */
+  liveWith: number
   items: ChecklistItem[]
 }
 /** A share the current user has granted. checklistId null means "all my lists". */
