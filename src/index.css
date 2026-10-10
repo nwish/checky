@@ -1131,7 +1131,12 @@ button.link:active {
 
 .checklist-item-grip {
   flex-shrink: 0;
-  padding: 6px 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 26px;
+  padding: 0;
   background: none;
   border: none;
   box-shadow: none;
