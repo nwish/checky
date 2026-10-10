@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { api, type Checklist, type ChecklistItem, type ChecklistSummary, type Share } from './api'
 import { ownerLabel } from './Avatar'
 import IconPicker from './IconPicker'
@@ -177,8 +177,24 @@ function ChecklistCard({
   const [titleDraft, setTitleDraft] = useState(summary.title)
   const [newItem, setNewItem] = useState('')
   const listRef = useRef<HTMLUListElement>(null)
-  const dragRef = useRef<{ id: number; before: ChecklistItem[] } | null>(null)
+  // grabOffset: pointer distance below the row's top edge when grabbed. pointerY: latest clientY.
+  const dragRef = useRef<{ id: number; before: ChecklistItem[]; grabOffset: number; pointerY: number } | null>(null)
   const [draggingId, setDraggingId] = useState<number | null>(null)
+
+  // The grabbed row is lifted out of the flow visually (transform) and tracks the pointer,
+  // while its slot in the list shows where it will land. offsetTop ignores transforms, so
+  // this stays correct as the neighbours reorder underneath it.
+  function liftDraggedRow() {
+    const drag = dragRef.current
+    const list = listRef.current
+    if (!drag || !list) return
+    const row = list.querySelector<HTMLElement>(`[data-item-id="${drag.id}"]`)
+    if (!row) return
+    const dy = drag.pointerY - list.getBoundingClientRect().top - drag.grabOffset - row.offsetTop
+    row.style.transform = `translateY(${dy}px) scale(1.02) rotate(-0.6deg)`
+  }
+
+  useLayoutEffect(liftDraggedRow, [checklist?.items])
 
   useEffect(() => {
     setTitleDraft(summary.title)
@@ -242,13 +258,21 @@ function ChecklistCard({
   function startDrag(e: React.PointerEvent<HTMLButtonElement>, itemId: number) {
     if (!checklist || (e.pointerType === 'mouse' && e.button !== 0)) return
     e.currentTarget.setPointerCapture(e.pointerId)
-    dragRef.current = { id: itemId, before: checklist.items }
+    const row = e.currentTarget.closest('li')!
+    dragRef.current = {
+      id: itemId,
+      before: checklist.items,
+      grabOffset: e.clientY - row.getBoundingClientRect().top,
+      pointerY: e.clientY
+    }
     setDraggingId(itemId)
   }
 
   function dragOver(e: React.PointerEvent<HTMLButtonElement>) {
     const drag = dragRef.current
     if (!drag || !listRef.current) return
+    drag.pointerY = e.clientY
+    liftDraggedRow()
     const others = Array.from(listRef.current.querySelectorAll<HTMLElement>('[data-item-id]')).filter(
       (row) => Number(row.dataset.itemId) !== drag.id
     )
@@ -270,6 +294,7 @@ function ChecklistCard({
     const drag = dragRef.current
     dragRef.current = null
     setDraggingId(null)
+    if (drag) listRef.current?.querySelector<HTMLElement>(`[data-item-id="${drag.id}"]`)?.style.removeProperty('transform')
     if (!drag || !checklist) return
     const order = checklist.items.map((i) => i.id)
     const changed = order.some((id, i) => id !== drag.before[i].id)

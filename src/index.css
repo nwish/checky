@@ -1067,6 +1067,7 @@ button.link:active {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  position: relative;
 }
 
 .checklist-item-row {
@@ -1150,10 +1151,23 @@ button.link:active {
   height: 15px;
 }
 
+/* While grabbed the row floats above the list (JS applies the transform to track the
+   pointer); its in-flow slot stays behind as a gap showing where it will land. */
+.checklist-item-row {
+  transition: box-shadow 0.16s ease, transform 0.16s ease;
+}
+
 .checklist-item-row.dragging {
+  position: relative;
+  z-index: 10;
+  transition: none;
   border-color: var(--focus);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--focus);
   cursor: grabbing;
+}
+
+.checklist-item-list:has(.dragging) {
+  user-select: none;
 }
 
 .checklist-item-row.dragging .checklist-item-grip {
