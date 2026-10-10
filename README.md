@@ -1,5 +1,8 @@
 # Rerun
 
+Life repeats. Your checklists should too. 🔁
+Create it once. Check it off. Reset. Rerun.
+
 Rerun turns repeatable activities into checklists. Build a list for each thing you do more than once — kayaking, road trips, campouts, yard work — then keep it exactly the way you want it.
 
 Going kayaking? Open the kayaking list, run through it top to bottom, and go kayaking. Reset the list and it's ready for next time.
