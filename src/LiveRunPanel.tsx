@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import { api, type LivePerson } from './api'
 import Avatar, { personName } from './Avatar'
 
-const STATE_LABEL = { none: '', invited: 'Invited — waiting to join', joined: 'In the run' } as const
+const STATE_LABEL = { none: '', invited: 'Invited — waiting to join', requested: 'Wants to run this with you', joined: 'In the run' } as const
 
 /**
- * Lets a list's owner invite people into one live run of it. Only people who run the list on their own
- * ('shared' mode) can be invited; people shared in 'collaborative' mode are always in the run. The run
- * ends, and everyone goes back to their own checks, when the list is reset or the owner ends it.
- * `refreshKey` changes when someone joins or leaves, so the statuses stay current.
+ * Lets a list's owner invite people into one live run of it, and answer people who ask to join. Only
+ * people who run the list on their own ('shared' mode) can be invited; people shared in 'collaborative'
+ * mode are always in the run. The run ends, and everyone goes back to their own checks, when the list
+ * is reset or the owner ends it. `refreshKey` changes when someone joins or leaves, so the statuses stay current.
  */
 export default function LiveRunPanel({ checklistId, refreshKey, onChanged }: { checklistId: number; refreshKey: number; onChanged: () => void }) {
   const [people, setPeople] = useState<LivePerson[] | null>(null)
@@ -35,10 +35,13 @@ export default function LiveRunPanel({ checklistId, refreshKey, onChanged }: { c
     }
   }
 
-  // The panel edits one declarative set: everyone who should be invited after this click.
+  // The panel edits one declarative set: everyone who should be invited after this click. Requests are
+  // answered with Accept/Decline instead, so they aren't part of this set.
   function toggle(person: LivePerson) {
     if (!people) return
-    const invited = people.filter((p) => p.mode === 'shared' && (p.email === person.email ? p.state === 'none' : p.state !== 'none')).map((p) => p.email)
+    const invited = people
+      .filter((p) => p.mode === 'shared' && (p.email === person.email ? p.state === 'none' : p.state === 'invited' || p.state === 'joined'))
+      .map((p) => p.email)
     apply(() => api.setLiveRun(checklistId, invited))
   }
 
@@ -64,6 +67,20 @@ export default function LiveRunPanel({ checklistId, refreshKey, onChanged }: { c
                   <Avatar person={p} className="sm" />
                   <span className="live-person-name" title={p.email}>{personName(p)}</span>
                   <span className="muted live-person-status">Always runs it with you</span>
+                </div>
+              ) : p.state === 'requested' ? (
+                <div className="live-person">
+                  <Avatar person={p} className="sm" />
+                  <span className="live-person-name" title={p.email}>{personName(p)}</span>
+                  <span className="muted live-person-status">{STATE_LABEL.requested}</span>
+                  <span className="live-person-actions">
+                    <button type="button" disabled={busy} onClick={() => apply(() => api.respondLiveRequest(checklistId, p.email, true))}>
+                      Accept
+                    </button>
+                    <button type="button" className="ghost" disabled={busy} onClick={() => apply(() => api.respondLiveRequest(checklistId, p.email, false))}>
+                      Decline
+                    </button>
+                  </span>
                 </div>
               ) : (
                 <label className="live-person">

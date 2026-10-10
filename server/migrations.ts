@@ -217,5 +217,14 @@ export const migrations: Migration[] = [
         CREATE INDEX idx_live_run_members_user ON live_run_members(user_id);
       `)
     }
+  },
+  {
+    version: 5,
+    name: 'live run requests (a shared-mode person asks to run together)',
+    // requested = 1 marks a row the person created by asking the owner to run together; it is
+    // accepted by the owner. requested = 0 is an owner's invitation, accepted by the invitee.
+    up(db) {
+      db.exec(`ALTER TABLE live_run_members ADD COLUMN requested INTEGER NOT NULL DEFAULT 0;`)
+    }
   }
 ]

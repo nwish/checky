@@ -34,6 +34,8 @@ type ListRow = {
   owner_id: number
   live_invite: number
   live_joined: number
+  live_requested: number
+  live_requests: number
 }
 
 const statements = {
@@ -42,7 +44,13 @@ const statements = {
     `SELECT c.id, c.title, c.icon, c.updated_at, u.email AS owner_email, u.display_name AS owner_name, u.avatar AS owner_avatar,
             CASE WHEN c.user_id = @me THEN 'owner' ELSE COALESCE(per.permission, al.permission) END AS access,
             CASE WHEN c.user_id <> @me AND COALESCE(per.mode, al.mode) = 'shared' AND m.joined_at IS NULL THEN 'personal' ELSE 'common' END AS scope,
-            c.user_id AS owner_id, (m.invited_at IS NOT NULL AND m.joined_at IS NULL) AS live_invite, (m.joined_at IS NOT NULL) AS live_joined,
+            c.user_id AS owner_id,
+            (m.requested = 0 AND m.joined_at IS NULL) AS live_invite,
+            (m.requested = 1 AND m.joined_at IS NULL) AS live_requested,
+            (m.joined_at IS NOT NULL) AS live_joined,
+            CASE WHEN c.user_id = @me
+                 THEN (SELECT COUNT(*) FROM live_run_members r WHERE r.checklist_id = c.id AND r.requested = 1 AND r.joined_at IS NULL)
+                 ELSE 0 END AS live_requests,
             COUNT(ci.id) AS item_count,
             COALESCE(SUM(CASE WHEN c.user_id <> @me AND COALESCE(per.mode, al.mode) = 'shared' AND m.joined_at IS NULL THEN ic.item_id IS NOT NULL ELSE ci.checked END), 0) AS checked_count
        FROM checklists c
@@ -123,12 +131,19 @@ const statements = {
        FROM checklist_shares s JOIN users u ON u.id = s.grantee_id
       WHERE s.checklist_id = @id OR (s.owner_id = @owner AND s.checklist_id IS NULL)`
   ),
-  members: db.prepare('SELECT user_id, joined_at FROM live_run_members WHERE checklist_id = ?'),
-  getMember: db.prepare('SELECT joined_at FROM live_run_members WHERE checklist_id = ? AND user_id = ?'),
+  members: db.prepare('SELECT user_id, joined_at, requested FROM live_run_members WHERE checklist_id = ?'),
+  getMember: db.prepare('SELECT joined_at, requested FROM live_run_members WHERE checklist_id = ? AND user_id = ?'),
   inviteMember: db.prepare('INSERT OR IGNORE INTO live_run_members (checklist_id, user_id) VALUES (?, ?)'),
+  requestMember: db.prepare('INSERT OR IGNORE INTO live_run_members (checklist_id, user_id, requested) VALUES (?, ?, 1)'),
   removeMember: db.prepare('DELETE FROM live_run_members WHERE checklist_id = ? AND user_id = ?'),
-  joinMember: db.prepare(`UPDATE live_run_members SET joined_at = datetime('now') WHERE checklist_id = ? AND user_id = ?`),
-  leaveMember: db.prepare('UPDATE live_run_members SET joined_at = NULL WHERE checklist_id = ? AND user_id = ?'),
+  // Only an owner's invitation can be accepted by the invitee; a request is accepted by the owner (acceptRequest).
+  joinMember: db.prepare(`UPDATE live_run_members SET joined_at = datetime('now') WHERE checklist_id = ? AND user_id = ? AND requested = 0`),
+  leaveInvited: db.prepare('UPDATE live_run_members SET joined_at = NULL WHERE checklist_id = ? AND user_id = ? AND requested = 0'),
+  acceptRequest: db.prepare(
+    `UPDATE live_run_members SET joined_at = datetime('now') WHERE checklist_id = ? AND user_id = ? AND requested = 1 AND joined_at IS NULL`
+  ),
+  dropRequest: db.prepare('DELETE FROM live_run_members WHERE checklist_id = ? AND user_id = ? AND requested = 1'),
+  requestCount: db.prepare('SELECT COUNT(*) AS n FROM live_run_members WHERE checklist_id = ? AND requested = 1 AND joined_at IS NULL'),
   endLiveRun: db.prepare('DELETE FROM live_run_members WHERE checklist_id = ?')
 }
 
@@ -182,8 +197,8 @@ type LivePerson = {
   avatar: string | null
   /** Their effective share mode on this list. 'collaborative' people are always in the common run. */
   mode: 'shared' | 'collaborative'
-  /** Only meaningful for 'shared' people: not invited, invited, or joined this run. */
-  state: 'none' | 'invited' | 'joined'
+  /** Only meaningful for 'shared' people: not in the run, invited by the owner, asking to join, or joined. */
+  state: 'none' | 'invited' | 'requested' | 'joined'
 }
 
 /** Everyone the list is shared with (a list-specific share beats an all-lists one), and where they stand in the current live run. */
@@ -195,7 +210,9 @@ function livePeople(listId: number, ownerId: number): LivePerson[] {
     if (!current || (current.checklist_id === null && r.checklist_id !== null)) effective.set(r.id, r)
   }
   const members = new Map(
-    (statements.members.all(listId) as Array<{ user_id: number; joined_at: string | null }>).map((m) => [m.user_id, m.joined_at === null ? 'invited' : 'joined'] as const)
+    (statements.members.all(listId) as Array<{ user_id: number; joined_at: string | null; requested: number }>).map(
+      (m) => [m.user_id, m.joined_at !== null ? 'joined' : m.requested ? 'requested' : 'invited'] as const
+    )
   )
   return [...effective.values()]
     .map((r) => ({ id: r.id, email: r.email, name: r.name, avatar: r.avatar, mode: r.mode, state: members.get(r.id) ?? ('none' as const) }))
@@ -213,11 +230,15 @@ function othersInRun(listId: number, ownerId: number, userId: number): number {
 
 /** Per-user live-run facts for one list: a pending invitation to join, and how many others are in the run you're in. */
 function liveStateFor(checklist: LoadedChecklist, userId: number) {
-  const member = statements.getMember.get(checklist.id, userId) as { joined_at: string | null } | undefined
+  const member = statements.getMember.get(checklist.id, userId) as { joined_at: string | null; requested: number } | undefined
   return {
-    liveInvite: member !== undefined && member.joined_at === null,
-    // Working the common run because the owner invited you (as opposed to always-collaborative), so you can leave it.
+    liveInvite: member !== undefined && !member.requested && member.joined_at === null,
+    // You asked to run it together and the owner hasn't answered yet.
+    liveRequested: member !== undefined && Boolean(member.requested) && member.joined_at === null,
+    // Working the common run because of a live-run invitation or request (as opposed to always-collaborative), so you can leave it.
     liveJoined: member !== undefined && member.joined_at !== null,
+    // For the owner: how many people are waiting for an answer to a request.
+    liveRequests: checklist.access === 'owner' ? (statements.requestCount.get(checklist.id) as { n: number }).n : 0,
     liveWith: checklist.scope === 'common' ? othersInRun(checklist.id, checklist.user_id, userId) : 0
   }
 }
@@ -242,6 +263,8 @@ checklistsRouter.get('/', (req, res) => {
       scope: r.scope,
       liveInvite: Boolean(r.live_invite),
       liveJoined: Boolean(r.live_joined),
+      liveRequested: Boolean(r.live_requested),
+      liveRequests: r.live_requests,
       liveWith: r.scope === 'common' ? othersInRun(r.id, r.owner_id, (req as unknown as AuthedRequest).user.id) : 0,
       ownerEmail: r.owner_email,
       ownerName: r.owner_name,
@@ -277,6 +300,8 @@ checklistsRouter.post('/', (req, res) => {
     scope: 'common',
     liveInvite: false,
     liveJoined: false,
+    liveRequested: false,
+    liveRequests: 0,
     liveWith: 0,
     ownerEmail: row.owner_email,
     ownerName: row.owner_name,
@@ -367,6 +392,8 @@ checklistsRouter.post('/:id/duplicate', (req, res) => {
     scope: 'common',
     liveInvite: false,
     liveJoined: false,
+    liveRequested: false,
+    liveRequests: 0,
     liveWith: 0,
     ownerEmail: row.owner_email,
     ownerName: row.owner_name,
@@ -550,7 +577,8 @@ checklistsRouter.put('/:id/live', (req, res) => {
       if (p.mode !== 'shared') continue
       const want = wanted.has(p.email.toLowerCase())
       if (want && p.state === 'none') statements.inviteMember.run(checklist.id, p.id)
-      else if (!want && p.state !== 'none') statements.removeMember.run(checklist.id, p.id)
+      else if (want && p.state === 'requested') statements.acceptRequest.run(checklist.id, p.id)
+      else if (!want && (p.state === 'invited' || p.state === 'joined')) statements.removeMember.run(checklist.id, p.id)
     }
   })()
   notifyChanged(req, checklist.id) // anyone uninvited who had joined leaves the live run
@@ -583,7 +611,50 @@ checklistsRouter.post('/:id/live/leave', (req, res) => {
   const me = (req as unknown as AuthedRequest).user
   const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'view')
   if (!checklist) return
-  statements.leaveMember.run(checklist.id, me.id)
+  statements.leaveInvited.run(checklist.id, me.id)
+  statements.dropRequest.run(checklist.id, me.id) // a request is withdrawn, or an accepted one ended; ask again to rejoin
   notifyChanged(req, checklist.id)
   res.json({ ok: true })
+})
+
+/**
+ * A person who runs the list on their own asks to run it together with the owner. The owner has to accept
+ * (their checks are what everyone in the run shares), so a request is not a way to join on your own.
+ */
+checklistsRouter.post('/:id/live/request', (req, res) => {
+  const me = (req as unknown as AuthedRequest).user
+  const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'view')
+  if (!checklist) return
+  if (checklist.access === 'owner') {
+    res.status(400).json({ error: 'this is your list: invite people to a live run instead' })
+    return
+  }
+  if (checklist.scope === 'common') {
+    res.status(400).json({ error: "you're already in this list's live run" })
+    return
+  }
+  const member = statements.getMember.get(checklist.id, me.id) as { requested: number } | undefined
+  if (member && !member.requested) {
+    res.status(409).json({ error: 'you have already been invited: join the live run instead' })
+    return
+  }
+  statements.requestMember.run(checklist.id, me.id) // a repeat request is a no-op
+  notifyChanged(req, checklist.id)
+  res.json({ ok: true })
+})
+
+checklistsRouter.post('/:id/live/respond', (req, res) => {
+  const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'owner')
+  if (!checklist) return
+  const body = req.body as Record<string, unknown>
+  const email = asString(body?.email).trim().toLowerCase()
+  const person = livePeople(checklist.id, checklist.user_id).find((p) => p.email.toLowerCase() === email && p.state === 'requested')
+  if (!person || typeof body?.accept !== 'boolean') {
+    res.status(404).json({ error: 'no pending request from that person' })
+    return
+  }
+  if (body.accept) statements.acceptRequest.run(checklist.id, person.id)
+  else statements.dropRequest.run(checklist.id, person.id)
+  notifyChanged(req, checklist.id)
+  res.json({ people: serializeLivePeople(livePeople(checklist.id, checklist.user_id)) })
 })

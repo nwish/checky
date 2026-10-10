@@ -149,6 +149,12 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
     api.checklists().then((r) => setSummaries(r.checklists))
   }
 
+  async function requestLive() {
+    if (!checklist) return
+    await api.requestLiveRun(checklist.id)
+    reloadChecklist(checklist.id)
+  }
+
   if (summaries === null) return <p className="muted">Loading…</p>
 
   if (summaries.length === 0) {
@@ -185,6 +191,7 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
                 <span className="checklist-card-title">{s.title}</span>
                 {s.access !== 'owner' && <span className="checklist-card-meta share-owner">from {ownerLabel(s)}</span>}
                 {s.liveInvite && <span className="run-invite-tag">Live run invite</span>}
+                {s.liveRequests > 0 && <span className="run-invite-tag">{s.liveRequests} want to run together</span>}
                 <span className="checklist-card-meta">{s.checkedCount}/{s.itemCount}</span>
               </button>
             )
@@ -256,6 +263,12 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
               Leave live run
             </button>
           )}
+          {checklist.access !== 'owner' && checklist.scope === 'personal' && !checklist.liveInvite && !checklist.liveRequested && (
+            <button type="button" className="ghost" onClick={requestLive} title={`Ask ${ownerLabel(checklist)} to run this list together with you`}>
+              {icons.together}
+              Run together
+            </button>
+          )}
           {summaries.length > 1 && (
             <button type="button" className="ghost" onClick={() => setActiveId(null)}>
               {icons.switchList}
@@ -267,6 +280,26 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
 
       {showLive && checklist.access === 'owner' && (
         <LiveRunPanel checklistId={checklist.id} refreshKey={checklist.liveWith} onChanged={() => reloadChecklist(checklist.id)} />
+      )}
+
+      {checklist.liveRequested && (
+        <p className="run-invite" role="status">
+          <span className="run-invite-text">Waiting for {ownerLabel(checklist)} to accept your request to run this list together.</span>
+          <button type="button" className="ghost" onClick={leaveLive}>
+            Cancel request
+          </button>
+        </p>
+      )}
+
+      {checklist.access === 'owner' && checklist.liveRequests > 0 && !showLive && (
+        <p className="run-invite" role="status">
+          <span className="run-invite-text">
+            {checklist.liveRequests === 1 ? '1 person wants' : `${checklist.liveRequests} people want`} to run this list together with you.
+          </span>
+          <button type="button" onClick={() => setShowLive(true)}>
+            Review
+          </button>
+        </p>
       )}
 
       {checklist.liveInvite && (
