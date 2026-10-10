@@ -1128,6 +1128,38 @@ button.link:active {
   height: 15px;
 }
 
+.checklist-item-grip {
+  flex-shrink: 0;
+  padding: 6px 2px;
+  background: none;
+  border: none;
+  box-shadow: none;
+  color: var(--dim);
+  cursor: grab;
+  touch-action: none;
+}
+
+.checklist-item-grip:hover {
+  color: var(--ink);
+  transform: none;
+  box-shadow: none;
+}
+
+.checklist-item-grip svg {
+  width: 15px;
+  height: 15px;
+}
+
+.checklist-item-row.dragging {
+  border-color: var(--focus);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  cursor: grabbing;
+}
+
+.checklist-item-row.dragging .checklist-item-grip {
+  cursor: grabbing;
+}
+
 .checklist-add-item-form {
   display: flex;
   gap: 8px;

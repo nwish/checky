@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { api, type Checklist, type ChecklistSummary, type Share } from './api'
+import { useEffect, useRef, useState } from 'react'
+import { api, type Checklist, type ChecklistItem, type ChecklistSummary, type Share } from './api'
 import { ownerLabel } from './Avatar'
 import IconPicker from './IconPicker'
 import SharePanel from './SharePanel'
@@ -21,6 +21,16 @@ const icons = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 5v14" />
       <path d="m19 12-7 7-7-7" />
+    </svg>
+  ),
+  grip: (
+    <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <circle cx="9" cy="6" r="1.6" />
+      <circle cx="15" cy="6" r="1.6" />
+      <circle cx="9" cy="12" r="1.6" />
+      <circle cx="15" cy="12" r="1.6" />
+      <circle cx="9" cy="18" r="1.6" />
+      <circle cx="15" cy="18" r="1.6" />
     </svg>
   ),
   trash: (
@@ -166,6 +176,9 @@ function ChecklistCard({
   const [checklist, setChecklist] = useState<Checklist | null>(null)
   const [titleDraft, setTitleDraft] = useState(summary.title)
   const [newItem, setNewItem] = useState('')
+  const listRef = useRef<HTMLUListElement>(null)
+  const dragRef = useRef<{ id: number; before: ChecklistItem[] } | null>(null)
+  const [draggingId, setDraggingId] = useState<number | null>(null)
 
   useEffect(() => {
     setTitleDraft(summary.title)
@@ -224,6 +237,55 @@ function ChecklistCard({
     setChecklist((c) => (c ? { ...c, items: r.items } : c))
   }
 
+  // Drag-to-reorder uses pointer events (not HTML5 DnD) so it also works by touch.
+  // The list reorders live under the pointer; the final order is saved on release.
+  function startDrag(e: React.PointerEvent<HTMLButtonElement>, itemId: number) {
+    if (!checklist || (e.pointerType === 'mouse' && e.button !== 0)) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dragRef.current = { id: itemId, before: checklist.items }
+    setDraggingId(itemId)
+  }
+
+  function dragOver(e: React.PointerEvent<HTMLButtonElement>) {
+    const drag = dragRef.current
+    if (!drag || !listRef.current) return
+    const others = Array.from(listRef.current.querySelectorAll<HTMLElement>('[data-item-id]')).filter(
+      (row) => Number(row.dataset.itemId) !== drag.id
+    )
+    const target = others.filter((row) => {
+      const box = row.getBoundingClientRect()
+      return e.clientY > box.top + box.height / 2
+    }).length
+    setChecklist((c) => {
+      if (!c) return c
+      const from = c.items.findIndex((i) => i.id === drag.id)
+      if (from === target) return c
+      const items = [...c.items]
+      items.splice(target, 0, ...items.splice(from, 1))
+      return { ...c, items }
+    })
+  }
+
+  async function endDrag(cancelled: boolean) {
+    const drag = dragRef.current
+    dragRef.current = null
+    setDraggingId(null)
+    if (!drag || !checklist) return
+    const order = checklist.items.map((i) => i.id)
+    const changed = order.some((id, i) => id !== drag.before[i].id)
+    if (cancelled || !changed) {
+      if (cancelled) setChecklist((c) => (c ? { ...c, items: drag.before } : c))
+      return
+    }
+    try {
+      const r = await api.reorderItems(summary.id, order)
+      setChecklist((c) => (c ? { ...c, items: r.items } : c))
+      onChanged()
+    } catch {
+      setChecklist((c) => (c ? { ...c, items: drag.before } : c))
+    }
+  }
+
   async function removeChecklist() {
     await api.deleteChecklist(summary.id)
     onDeleted(summary.id)
@@ -269,9 +331,26 @@ function ChecklistCard({
           {!checklist ? (
             <p className="muted">Loading…</p>
           ) : (
-            <ul className="checklist-item-list">
+            <ul className="checklist-item-list" ref={listRef}>
               {checklist.items.map((item, idx) => (
-                <li key={item.id} className="checklist-item-row">
+                <li
+                  key={item.id}
+                  data-item-id={item.id}
+                  className={`checklist-item-row${draggingId === item.id ? ' dragging' : ''}`}
+                >
+                  {canEdit && checklist.items.length > 1 && (
+                    <button
+                      type="button"
+                      className="ghost checklist-item-grip"
+                      aria-label="Drag to reorder"
+                      onPointerDown={(e) => startDrag(e, item.id)}
+                      onPointerMove={dragOver}
+                      onPointerUp={() => endDrag(false)}
+                      onPointerCancel={() => endDrag(true)}
+                    >
+                      {icons.grip}
+                    </button>
+                  )}
                   <input
                     className="checklist-item-text"
                     value={item.text}

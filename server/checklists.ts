@@ -439,3 +439,31 @@ checklistsRouter.post('/:id/items/:itemId/move', (req, res) => {
   notifyChanged(req, checklist.id)
   res.json({ items: itemsFor(checklist, (req as unknown as AuthedRequest).user.id).map(serializeItem) })
 })
+
+// Persist a full drag-and-drop ordering. `order` must list every item id of the list exactly once.
+const applyOrder = db.transaction((ids: number[]) => {
+  ids.forEach((id, position) => statements.updateItemPosition.run(position, id))
+})
+
+checklistsRouter.post('/:id/items/reorder', (req, res) => {
+  const checklist = loadChecklist(req as unknown as AuthedRequest, res, Number(req.params.id), 'edit')
+  if (!checklist) return
+  const order = (req.body as Record<string, unknown>)?.order
+  const items = statements.listItems.all(checklist.id) as ItemRow[]
+  const valid =
+    Array.isArray(order) &&
+    order.length === items.length &&
+    new Set(order).size === order.length &&
+    order.every((id) => typeof id === 'number' && items.some((i) => i.id === id))
+  if (!valid) {
+    res.status(400).json({ error: 'order must list every item of the checklist exactly once' })
+    return
+  }
+  const current = items.map((i) => i.id)
+  if (order.some((id, i) => id !== current[i])) {
+    applyOrder(order as number[])
+    statements.touchChecklist.run(checklist.id)
+    notifyChanged(req, checklist.id)
+  }
+  res.json({ items: itemsFor(checklist, (req as unknown as AuthedRequest).user.id).map(serializeItem) })
+})

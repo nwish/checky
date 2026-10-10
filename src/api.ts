@@ -138,6 +138,11 @@ export const api = {
       `/api/checklists/${id}/items/${itemId}/move`,
       json('POST', `/api/checklists/${id}/items/${itemId}/move`, { direction })
     ),
+  reorderItems: (id: number, order: number[]) =>
+    request<{ items: ChecklistItem[] }>(
+      `/api/checklists/${id}/items/reorder`,
+      json('POST', `/api/checklists/${id}/items/reorder`, { order })
+    ),
 
   shares: () => request<{ shares: Share[] }>('/api/shares'),
   putShare: (email: string, permission: SharePermission, mode: ShareMode, checklistId: number | null) =>
