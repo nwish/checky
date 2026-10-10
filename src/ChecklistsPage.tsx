@@ -352,7 +352,7 @@ function ChecklistCard({
           <span className="checklist-card-title">{summary.title}</span>
           {!isOwner && <span className="checklist-card-meta share-owner">from {ownerLabel(summary)}</span>}
         </button>
-        <span className="checklist-card-meta">{summary.checkedCount}/{summary.itemCount}</span>
+        <span className="checklist-card-meta">{summary.itemCount}</span>
         {isOwner && (
           <button
             type="button"
