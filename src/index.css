@@ -1738,6 +1738,26 @@ select:focus {
   font-weight: 600;
 }
 
+.checklist-pick-share {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.checklist-pick-share svg {
+  width: 16px;
+  height: 16px;
+}
+
+.checklist-pick-share span {
+  color: var(--status);
+}
+
 .run-checklist {
   display: flex;
   flex-direction: column;
