@@ -930,6 +930,13 @@ button.link:active {
   text-overflow: ellipsis;
 }
 
+.user-submeta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .user-row button.ghost {
   padding: 6px 12px;
   font-size: 0.76rem;
