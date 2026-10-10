@@ -2343,6 +2343,23 @@ div.live-person {
   box-shadow: var(--shadow-key-pressed);
 }
 
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+button.danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--key-border));
+}
+
+button.danger:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
 .checklist-card-icon {
   flex-shrink: 0;
   display: flex;

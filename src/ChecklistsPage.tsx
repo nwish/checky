@@ -217,6 +217,9 @@ function ChecklistCard({
     }
   }, [draggingId])
   const [sharing, setSharing] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     setTitleDraft(summary.title)
@@ -329,8 +332,21 @@ function ChecklistCard({
   }
 
   async function removeChecklist() {
-    await api.deleteChecklist(summary.id)
-    onDeleted(summary.id)
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      await api.deleteChecklist(summary.id)
+      onDeleted(summary.id)
+    } catch (err) {
+      setDeleteError((err as Error).message)
+      setDeleting(false)
+    }
+  }
+
+  function closeDeleteDialog() {
+    if (deleting) return
+    setConfirmingDelete(false)
+    setDeleteError(null)
   }
 
   async function duplicateChecklist() {
@@ -447,7 +463,7 @@ function ChecklistCard({
               Duplicate
             </button>
             {isOwner && (
-              <button type="button" className="ghost checklist-delete" onClick={removeChecklist}>
+              <button type="button" className="ghost checklist-delete" onClick={() => setConfirmingDelete(true)}>
                 {icons.trash}
                 Delete checklist
               </button>
@@ -459,6 +475,28 @@ function ChecklistCard({
       {sharing && (
         <Modal title={`Share “${summary.title}”`} onClose={() => setSharing(false)} className="share-modal">
           <SharePanel checklistId={summary.id} shares={shares} onChanged={onChanged} onManageAll={onManageAll} />
+        </Modal>
+      )}
+
+      {confirmingDelete && (
+        <Modal title={`Delete “${summary.title}”?`} onClose={closeDeleteDialog}>
+          <p className="muted">
+            This permanently deletes the list{summary.itemCount > 0 ? ` and its ${summary.itemCount} ${summary.itemCount === 1 ? 'item' : 'items'}` : ''},
+            its run history, and{sharedWith > 0 ? ` its sharing with ${sharedWith} ${sharedWith === 1 ? 'person' : 'people'}` : ' any sharing'}. It can’t be undone.
+          </p>
+          {deleteError && (
+            <p className="error" role="alert">
+              {deleteError}
+            </p>
+          )}
+          <div className="modal-actions">
+            <button type="button" className="ghost" onClick={closeDeleteDialog} disabled={deleting}>
+              Cancel
+            </button>
+            <button type="button" className="ghost danger" onClick={removeChecklist} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete list'}
+            </button>
+          </div>
         </Modal>
       )}
     </div>
