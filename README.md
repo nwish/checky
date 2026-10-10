@@ -6,6 +6,13 @@ Going kayaking? Open the kayaking list, run through it top to bottom, and go kay
 
 Local and self-hosted: everything lives on your machine in a SQLite file. No cloud account, no sync, no subscription.
 
+[![CI](https://img.shields.io/github/actions/workflow/status/nwish/rerun/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/nwish/rerun/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/nwish/rerun?style=flat-square&label=Release)](https://github.com/nwish/rerun/releases)
+[![Docker Publish](https://img.shields.io/github/actions/workflow/status/nwish/rerun/publish.yml?style=flat-square&label=Docker%20Publish)](https://github.com/nwish/rerun/actions/workflows/publish.yml)
+[![License](https://img.shields.io/github/license/nwish/rerun?style=flat-square)](https://github.com/nwish/rerun/blob/main/LICENSE)
+[![Stars](https://img.shields.io/github/stars/nwish/rerun?style=flat-square)](https://github.com/nwish/rerun/stargazers)
+[![Last Commit](https://img.shields.io/github/last-commit/nwish/rerun?style=flat-square)](https://github.com/nwish/rerun/commits/main)
+
 ## Stack
 
 | Layer     | Tech                                                        |
@@ -14,6 +21,15 @@ Local and self-hosted: everything lives on your machine in a SQLite file. No clo
 | Frontend  | React 18, Vite, TypeScript                                   |
 | Database  | SQLite via `better-sqlite3` (WAL mode)                       |
 | Auth      | PBKDF2 password hashing, server-side sessions in SQLite      |
+
+
+![Node.js](https://img.shields.io/badge/Node.js-24-339933?style=flat-square&logo=nodedotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-18-149ECA?style=flat-square&logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
+![Self Hosted](https://img.shields.io/badge/Self--Hosted-Ready-2ea44f?style=flat-square&logo=serverfault&logoColor=white)
+
 
 ## Requirements
 
