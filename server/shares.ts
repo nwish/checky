@@ -30,7 +30,19 @@ const statements = {
        FROM checklist_shares s JOIN users u ON u.id = s.grantee_id
       WHERE s.id = ?`
   ),
-  deleteShare: db.prepare('DELETE FROM checklist_shares WHERE id = ? AND owner_id = ?')
+  deleteShare: db.prepare('DELETE FROM checklist_shares WHERE id = ? AND owner_id = ?'),
+  shareGrantee: db.prepare('SELECT grantee_id FROM checklist_shares WHERE id = ? AND owner_id = ?'),
+  // Live-run invitations only make sense while the grantee still runs the list on their own, so drop
+  // them wherever the effective share (a list-specific one beats an all-lists one) is gone or collaborative.
+  pruneMembers: db.prepare(
+    `DELETE FROM live_run_members
+      WHERE user_id = @g
+        AND checklist_id IN (SELECT id FROM checklists WHERE user_id = @owner)
+        AND COALESCE(
+              (SELECT s.mode FROM checklist_shares s WHERE s.grantee_id = @g AND s.checklist_id = live_run_members.checklist_id),
+              (SELECT s.mode FROM checklist_shares s WHERE s.grantee_id = @g AND s.owner_id = @owner AND s.checklist_id IS NULL)
+            ) IS NOT 'shared'`
+  )
 }
 
 function serialize(row: ShareRow) {
@@ -108,17 +120,20 @@ sharesRouter.put('/', shareLimiter, (req, res) => {
   } else {
     id = Number(statements.insertShare.run(me.id, grantee.id, checklistId, permission, mode).lastInsertRowid)
   }
+  statements.pruneMembers.run({ g: grantee.id, owner: me.id })
   notifyOwner(me.id) // a revoked or re-moded grantee must leave the live run
   res.status(existing ? 200 : 201).json(serialize(statements.getShare.get(id) as ShareRow))
 })
 
 sharesRouter.delete('/:id', (req, res) => {
   const me = (req as unknown as AuthedRequest).user
-  const info = statements.deleteShare.run(Number(req.params.id), me.id)
-  if (info.changes === 0) {
+  const share = statements.shareGrantee.get(Number(req.params.id), me.id) as { grantee_id: number } | undefined
+  if (!share) {
     res.status(404).json({ error: 'share not found' })
     return
   }
+  statements.deleteShare.run(Number(req.params.id), me.id)
+  statements.pruneMembers.run({ g: share.grantee_id, owner: me.id })
   notifyOwner(me.id)
   res.json({ ok: true })
 })
