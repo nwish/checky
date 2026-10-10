@@ -71,7 +71,7 @@ export default function App() {
       {isAdminRoute ? (
         <AdminPage />
       ) : isChecklistsRoute ? (
-        <ChecklistsPage />
+        <ChecklistsPage navigate={navigate} />
       ) : isHistoryRoute ? (
         <HistoryPage />
       ) : isSettingsRoute ? (
