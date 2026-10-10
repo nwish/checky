@@ -64,12 +64,12 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
     Promise.all([api.checklists(), api.shares()]).then(([r, granted]) => {
       setSummaries(r.checklists)
       setShares(granted.shares)
+      // Open straight into a list only when a run is under way (some checks made). With several in
+      // progress, prefer the one used last; otherwise show the picker.
+      const inProgress = r.checklists.filter((c) => c.checkedCount > 0)
       const lastId = Number(window.localStorage.getItem(LAST_CHECKLIST_KEY))
-      if (lastId && r.checklists.some((c) => c.id === lastId)) {
-        setActiveId(lastId)
-      } else if (r.checklists.length === 1) {
-        setActiveId(r.checklists[0].id)
-      }
+      const resume = inProgress.find((c) => c.id === lastId) ?? inProgress[0]
+      if (resume) setActiveId(resume.id)
     })
   }, [])
 
