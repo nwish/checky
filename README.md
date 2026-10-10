@@ -194,8 +194,12 @@ docker compose up -d --build    # or build from source (uses docker/Dockerfile)
 └── data/            SQLite files (created at runtime)
 ```
 
-## Development notes
 
-- Frontend TS is checked with `npm run typecheck`; Vite transpiles via esbuild (no type emit).
-- The dark theme lives in CSS variables at the top of `src/index.css` — tweak `--bg`, `--accent`, etc. there.
-- The API listens on `3001` by default because `3000` was occupied on this machine; use `PORT=… npm start` (or `dev`) to pick another.
+<details>
+<summary>🦝 What happens if I forget something?</summary>
+
+That's between you and your checklist.
+
+Rerun tried to warn you. 😎
+
+</details>
