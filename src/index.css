@@ -1301,7 +1301,12 @@ select:focus {
 }
 
 .share-form input {
-  flex: 1 1 120px;
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.share-form select {
+  flex: 1 1 0;
   min-width: 0;
 }
 
