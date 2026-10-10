@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { api, type Share, type SharePermission, type ShareMode } from './api'
 import Avatar, { personName } from './Avatar'
 
@@ -22,6 +22,14 @@ export default function SharePanel({
   const [error, setError] = useState<string | null>(null)
   const [addError, setAddError] = useState<string | null>(null)
   const addErrorId = useId()
+  // The most recently removed share, kept briefly so it can be undone.
+  const [removed, setRemoved] = useState<Share | null>(null)
+
+  useEffect(() => {
+    if (!removed) return
+    const timer = setTimeout(() => setRemoved(null), 8000)
+    return () => clearTimeout(timer)
+  }, [removed])
 
   const scoped = shares.filter((s) => s.checklistId === checklistId)
   // For a single list, other people may also have access through "share all".
@@ -48,6 +56,16 @@ export default function SharePanel({
     const target = email.trim()
     if (!target) return
     if (await run(() => api.putShare(target, permission, mode, checklistId), setAddError)) setEmail('')
+  }
+
+  async function remove(share: Share) {
+    if (await run(() => api.deleteShare(share.id))) setRemoved(share)
+  }
+
+  // Re-grants the share exactly as it was (same person, access, mode and scope).
+  async function undoRemove() {
+    if (!removed) return
+    if (await run(() => api.putShare(removed.email, removed.permission, removed.mode, removed.checklistId))) setRemoved(null)
   }
 
   return (
@@ -78,12 +96,21 @@ export default function SharePanel({
                 <option value="shared">Shared</option>
                 <option value="collaborative">Collaborative</option>
               </select>
-              <button type="button" className="ghost" disabled={busy} onClick={() => run(() => api.deleteShare(s.id))} aria-label={`Stop sharing with ${s.email}`}>
+              <button type="button" className="ghost" disabled={busy} onClick={() => remove(s)} aria-label={`Stop sharing with ${s.email}`}>
                 Remove
               </button>
             </li>
           ))}
         </ul>
+      )}
+
+      {removed && (
+        <p className="share-undo" role="status">
+          <span>Stopped sharing with {personName(removed)}.</span>
+          <button type="button" className="link" disabled={busy} onClick={undoRemove}>
+            Undo
+          </button>
+        </p>
       )}
 
       {inherited.length > 0 && (

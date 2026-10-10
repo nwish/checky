@@ -1314,6 +1314,27 @@ select:focus {
   flex: 1 1 100%;
 }
 
+.share-undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  padding: 6px 6px 6px 12px;
+  background: var(--chassis);
+  border: 1px solid var(--key-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  animation: run-reset-notice-in 0.2s ease-out;
+}
+
+.share-undo button.link {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 5px 10px;
+  font-size: 0.82rem;
+}
+
 .share-legend {
   margin: 0;
   font-size: 0.82rem;
