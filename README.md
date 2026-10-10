@@ -1,13 +1,12 @@
+<div align="center">
+
 # Rerun
 
-Life repeats. Your checklists should too. 🔁
+Life repeats. Your checklists should too. 🔁<br>
 Create it once. Check it off. Reset. Rerun.
 
-Rerun turns repeatable activities into checklists. Build a list for each thing you do more than once — kayaking, road trips, campouts, yard work — then keep it exactly the way you want it.
+<img src="docs/screenshot.png" alt="Rerun: running a kayaking checklist" width="800">
 
-Going kayaking? Open the kayaking list, run through it top to bottom, and go kayaking. Reset the list and it's ready for next time.
-
-Local and self-hosted: everything lives on your machine in a SQLite file. No cloud account, no sync, no subscription.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/nwish/rerun/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/nwish/rerun/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/nwish/rerun?style=flat-square&label=Release)](https://github.com/nwish/rerun/releases)
@@ -16,6 +15,13 @@ Local and self-hosted: everything lives on your machine in a SQLite file. No clo
 [![Stars](https://img.shields.io/github/stars/nwish/rerun?style=flat-square)](https://github.com/nwish/rerun/stargazers)
 [![Last Commit](https://img.shields.io/github/last-commit/nwish/rerun?style=flat-square)](https://github.com/nwish/rerun/commits/main)
 
+</div>
+
+Rerun turns repeatable activities into checklists. Build a list for each thing you do more than once — kayaking, road trips, campouts, yard work — then keep it exactly the way you want it.
+
+Going kayaking? Open the kayaking list, run through it top to bottom, and go kayaking. Reset the list and it's ready for next time.
+
+Local and self-hosted: everything lives on your machine in a SQLite file. No cloud account, no sync, no subscription.
 
 ## 🔁 Things You Can Rerun
 
