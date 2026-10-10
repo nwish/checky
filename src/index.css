@@ -1131,9 +1131,19 @@ button.link:active {
 }
 
 .checklist-card-header:hover {
-  background: var(--key-hover);
+  background: var(--action-hover);
   transform: none;
   box-shadow: none;
+}
+
+/* The row turns the action color on hover, so swap light text for the dark action ink (as on the Dashboard picker). */
+.checklist-card-header:hover,
+.checklist-card-header:hover * {
+  color: var(--action-ink);
+}
+
+.checklist-card-header:hover .checklist-card-share:hover {
+  background: color-mix(in srgb, var(--action-ink) 14%, transparent);
 }
 
 .checklist-card-toggle {
@@ -1871,6 +1881,19 @@ select:focus {
 
 .checklist-pick-share span {
   color: var(--status);
+}
+
+/* Hover/tap turns the card the action color (global button:hover), so swap light text for the dark action ink. */
+.checklist-pick-card:hover,
+.checklist-pick-card:active,
+.checklist-pick-card:hover *,
+.checklist-pick-card:active * {
+  color: var(--action-ink);
+}
+
+.checklist-pick-card:hover .run-invite-tag,
+.checklist-pick-card:active .run-invite-tag {
+  border-color: color-mix(in srgb, var(--action-ink) 45%, transparent);
 }
 
 .run-checklist {
