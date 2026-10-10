@@ -3,6 +3,7 @@ import { api, type Checklist, type ChecklistSummary } from './api'
 import { useLiveRun } from './useLive'
 import Avatar, { ownerLabel, personName } from './Avatar'
 import { checklistIcon } from './icons'
+import LiveRunPanel from './LiveRunPanel'
 
 const LAST_CHECKLIST_KEY = 'rerun-last-checklist'
 const RESET_NOTICE_MS = 8000
@@ -17,6 +18,14 @@ const icons = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="4" y="4" width="16" height="16" rx="4" />
       <path d="m8 12.5 2.5 2.5L16 9.5" />
+    </svg>
+  ),
+  together: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+      <circle cx="17" cy="9" r="2.6" />
+      <path d="M16 14.2a4.6 4.6 0 0 1 5 4.3" />
     </svg>
   ),
   switchList: (
@@ -39,6 +48,7 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
   const [activeId, setActiveId] = useState<number | null>(null)
   const [checklist, setChecklist] = useState<Checklist | null>(null)
   const [resetNotice, setResetNotice] = useState<{ checked: number; total: number } | null>(null)
+  const [showLive, setShowLive] = useState(false)
 
   useEffect(() => {
     api.checklists().then((r) => {
@@ -61,6 +71,17 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
 
   useEffect(() => {
     setResetNotice(null)
+    setShowLive(false)
+  }, [activeId])
+
+  // An invitation can arrive while this tab is in the background; pick it up when you come back.
+  useEffect(() => {
+    function refresh() {
+      api.checklists().then((r) => setSummaries(r.checklists))
+      if (activeId !== null) reloadChecklist(activeId)
+    }
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
   }, [activeId])
 
   useEffect(() => {
@@ -111,6 +132,21 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
     const r = await api.resetChecklist(checklist.id)
     setChecklist((c) => (c ? { ...c, items: r.items } : c))
     setResetNotice(saved)
+    reloadChecklist(checklist.id) // resetting ends the live run, so the badge and who's in it change
+  }
+
+  async function joinLive() {
+    if (!checklist) return
+    await api.joinLiveRun(checklist.id)
+    reloadChecklist(checklist.id)
+    api.checklists().then((r) => setSummaries(r.checklists))
+  }
+
+  async function leaveLive() {
+    if (!checklist) return
+    await api.leaveLiveRun(checklist.id)
+    reloadChecklist(checklist.id)
+    api.checklists().then((r) => setSummaries(r.checklists))
   }
 
   if (summaries === null) return <p className="muted">Loading…</p>
@@ -148,6 +184,7 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
                 <span className="checklist-card-icon"><Icon /></span>
                 <span className="checklist-card-title">{s.title}</span>
                 {s.access !== 'owner' && <span className="checklist-card-meta share-owner">from {ownerLabel(s)}</span>}
+                {s.liveInvite && <span className="run-invite-tag">Live run invite</span>}
                 <span className="checklist-card-meta">{s.checkedCount}/{s.itemCount}</span>
               </button>
             )
@@ -208,6 +245,17 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
             {icons.reset}
             Reset
           </button>
+          {checklist.access === 'owner' && (
+            <button type="button" className="ghost" aria-expanded={showLive} onClick={() => setShowLive((v) => !v)}>
+              {icons.together}
+              Run together
+            </button>
+          )}
+          {checklist.liveJoined && (
+            <button type="button" className="ghost" onClick={leaveLive} title="Go back to running this list on your own">
+              Leave live run
+            </button>
+          )}
           {summaries.length > 1 && (
             <button type="button" className="ghost" onClick={() => setActiveId(null)}>
               {icons.switchList}
@@ -216,6 +264,21 @@ export default function DashboardPage({ navigate, email }: { navigate: (to: stri
           )}
         </div>
       </div>
+
+      {showLive && checklist.access === 'owner' && (
+        <LiveRunPanel checklistId={checklist.id} refreshKey={checklist.liveWith} onChanged={() => reloadChecklist(checklist.id)} />
+      )}
+
+      {checklist.liveInvite && (
+        <p className="run-invite" role="status">
+          <span className="run-invite-text">
+            {ownerLabel(checklist)} invited you to run this list together. You'll all work on the same checks until the list is reset; your own checks stay as they are.
+          </span>
+          <button type="button" onClick={joinLive}>
+            Join live run
+          </button>
+        </p>
+      )}
 
       {resetNotice && (
         <p className="run-reset-notice" role="status">

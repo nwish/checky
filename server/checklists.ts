@@ -33,6 +33,7 @@ type ListRow = {
   checked_count: number
   owner_id: number
   live_invite: number
+  live_joined: number
 }
 
 const statements = {
@@ -41,7 +42,7 @@ const statements = {
     `SELECT c.id, c.title, c.icon, c.updated_at, u.email AS owner_email, u.display_name AS owner_name, u.avatar AS owner_avatar,
             CASE WHEN c.user_id = @me THEN 'owner' ELSE COALESCE(per.permission, al.permission) END AS access,
             CASE WHEN c.user_id <> @me AND COALESCE(per.mode, al.mode) = 'shared' AND m.joined_at IS NULL THEN 'personal' ELSE 'common' END AS scope,
-            c.user_id AS owner_id, (m.invited_at IS NOT NULL AND m.joined_at IS NULL) AS live_invite,
+            c.user_id AS owner_id, (m.invited_at IS NOT NULL AND m.joined_at IS NULL) AS live_invite, (m.joined_at IS NOT NULL) AS live_joined,
             COUNT(ci.id) AS item_count,
             COALESCE(SUM(CASE WHEN c.user_id <> @me AND COALESCE(per.mode, al.mode) = 'shared' AND m.joined_at IS NULL THEN ic.item_id IS NOT NULL ELSE ci.checked END), 0) AS checked_count
        FROM checklists c
@@ -215,6 +216,8 @@ function liveStateFor(checklist: LoadedChecklist, userId: number) {
   const member = statements.getMember.get(checklist.id, userId) as { joined_at: string | null } | undefined
   return {
     liveInvite: member !== undefined && member.joined_at === null,
+    // Working the common run because the owner invited you (as opposed to always-collaborative), so you can leave it.
+    liveJoined: member !== undefined && member.joined_at !== null,
     liveWith: checklist.scope === 'common' ? othersInRun(checklist.id, checklist.user_id, userId) : 0
   }
 }
@@ -238,6 +241,7 @@ checklistsRouter.get('/', (req, res) => {
       access: r.access,
       scope: r.scope,
       liveInvite: Boolean(r.live_invite),
+      liveJoined: Boolean(r.live_joined),
       liveWith: r.scope === 'common' ? othersInRun(r.id, r.owner_id, (req as unknown as AuthedRequest).user.id) : 0,
       ownerEmail: r.owner_email,
       ownerName: r.owner_name,
@@ -272,6 +276,7 @@ checklistsRouter.post('/', (req, res) => {
     access: 'owner',
     scope: 'common',
     liveInvite: false,
+    liveJoined: false,
     liveWith: 0,
     ownerEmail: row.owner_email,
     ownerName: row.owner_name,
@@ -361,6 +366,7 @@ checklistsRouter.post('/:id/duplicate', (req, res) => {
     access: 'owner',
     scope: 'common',
     liveInvite: false,
+    liveJoined: false,
     liveWith: 0,
     ownerEmail: row.owner_email,
     ownerName: row.owner_name,

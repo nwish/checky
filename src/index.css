@@ -1556,6 +1556,116 @@ select:focus {
   background: currentColor;
 }
 
+.live-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: var(--chassis);
+  border: 1px solid var(--key-border);
+  border-radius: var(--radius-sm);
+}
+
+.live-panel p {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.live-people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.live-person {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--ink);
+}
+
+label.live-person {
+  cursor: pointer;
+}
+
+/* Rows without a checkbox line up with the ones that have one (18px box + 10px gap). */
+div.live-person {
+  padding-left: 28px;
+}
+
+.live-person input[type='checkbox'] {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  box-shadow: none;
+  accent-color: var(--action);
+  cursor: pointer;
+}
+
+.live-person-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-person-status {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+}
+
+.live-end {
+  align-self: flex-start;
+  margin: 0;
+}
+
+.run-invite {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  background: var(--chassis);
+  border: 1px solid color-mix(in srgb, var(--status) 45%, transparent);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+.run-invite-text {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.run-invite button {
+  margin: 0;
+}
+
+.run-invite-tag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--status) 45%, transparent);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--status);
+}
+
 .run-presence {
   margin: 4px 0 0;
   font-family: var(--font-mono);
