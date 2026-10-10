@@ -11,18 +11,6 @@ const icons = {
       <path d="m6 9 6 6 6-6" />
     </svg>
   ),
-  up: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 19V5" />
-      <path d="m5 12 7-7 7 7" />
-    </svg>
-  ),
-  down: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 5v14" />
-      <path d="m19 12-7 7-7-7" />
-    </svg>
-  ),
   grip: (
     <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
       <circle cx="9" cy="6" r="1.6" />
@@ -268,11 +256,6 @@ function ChecklistCard({
     onChanged()
   }
 
-  async function moveItem(itemId: number, direction: 'up' | 'down') {
-    const r = await api.moveItem(summary.id, itemId, direction)
-    setChecklist((c) => (c ? { ...c, items: r.items } : c))
-  }
-
   // Drag-to-reorder uses pointer events (not HTML5 DnD) so it also works by touch.
   // The list reorders live under the pointer; the final order is saved on release.
   function startDrag(e: React.PointerEvent<HTMLButtonElement>, itemId: number) {
@@ -377,7 +360,7 @@ function ChecklistCard({
             <p className="muted">Loading…</p>
           ) : (
             <ul className="checklist-item-list" ref={listRef}>
-              {checklist.items.map((item, idx) => (
+              {checklist.items.map((item) => (
                 <li
                   key={item.id}
                   data-item-id={item.id}
@@ -404,18 +387,6 @@ function ChecklistCard({
                     />
                     {canEdit && (
                       <div className="checklist-item-actions">
-                        <button type="button" className="ghost" onClick={() => moveItem(item.id, 'up')} disabled={idx === 0} aria-label="Move item up">
-                          {icons.up}
-                        </button>
-                        <button
-                          type="button"
-                          className="ghost"
-                          onClick={() => moveItem(item.id, 'down')}
-                          disabled={idx === checklist.items.length - 1}
-                          aria-label="Move item down"
-                        >
-                          {icons.down}
-                        </button>
                         <button type="button" className="ghost" onClick={() => removeItem(item.id)} aria-label="Delete item">
                           {icons.trash}
                         </button>
