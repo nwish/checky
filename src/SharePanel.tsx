@@ -2,6 +2,9 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { api, type Share, type SharePermission, type ShareMode } from './api'
 import Avatar, { personName } from './Avatar'
 
+const ACCESS_LABEL: Record<SharePermission, string> = { view: 'View items', edit: 'Edit items' }
+const MODE_LABEL: Record<ShareMode, string> = { shared: 'Shared', collaborative: 'Collaborative' }
+
 /**
  * Manages shares for one scope: a single checklist, or (checklistId null) all of the
  * owner's lists. `shares` is the owner's full share list; this filters to its scope.
@@ -9,11 +12,14 @@ import Avatar, { personName } from './Avatar'
 export default function SharePanel({
   checklistId,
   shares,
-  onChanged
+  onChanged,
+  onManageAll
 }: {
   checklistId: number | null
   shares: Share[]
   onChanged: () => void
+  /** Where people shared on every list are managed; shown as a link when this panel lists them. */
+  onManageAll?: () => void
 }) {
   const [email, setEmail] = useState('')
   const [permission, setPermission] = useState<SharePermission>('view')
@@ -121,9 +127,26 @@ export default function SharePanel({
       )}
 
       {inherited.length > 0 && (
-        <p className="muted share-empty">
-          Also visible to {inherited.map((s) => `${personName(s)} (${s.mode})`).join(', ')} through “Share all lists”.
-        </p>
+        <div className="share-inherited">
+          <div className="share-inherited-header">
+            <p className="muted share-empty">Also has access through “Share all lists”</p>
+            {onManageAll && (
+              <button type="button" className="link" onClick={onManageAll}>
+                Manage in Settings
+              </button>
+            )}
+          </div>
+          <ul className="share-list">
+            {inherited.map((s) => (
+              <li key={s.id} className="share-row share-row-inherited">
+                <Avatar person={s} className="sm" />
+                <span className="share-email" title={s.email}>{s.name ? `${s.name} (${s.email})` : s.email}</span>
+                <span className="muted share-access-text">{ACCESS_LABEL[s.permission]} · {MODE_LABEL[s.mode]}</span>
+                <span className="share-badge">All lists</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <form onSubmit={add} className="share-form">

@@ -44,7 +44,7 @@ const icons = {
   )
 }
 
-export default function ChecklistsPage() {
+export default function ChecklistsPage({ navigate }: { navigate: (to: string) => void }) {
   const [checklists, setChecklists] = useState<ChecklistSummary[] | null>(null)
   const [shares, setShares] = useState<Share[]>([])
   const [expandedId, setExpandedId] = useState<number | null>(null)
@@ -141,6 +141,7 @@ export default function ChecklistsPage() {
               key={summary.id}
               summary={summary}
               shares={shares}
+              onManageAll={() => navigate('/settings')}
               expanded={expandedId === summary.id}
               onToggle={() => setExpandedId(expandedId === summary.id ? null : summary.id)}
               onDeleted={handleDeleted}
@@ -157,6 +158,7 @@ export default function ChecklistsPage() {
 function ChecklistCard({
   summary,
   shares,
+  onManageAll,
   expanded,
   onToggle,
   onDeleted,
@@ -170,6 +172,7 @@ function ChecklistCard({
   onDeleted: (id: number) => void
   onDuplicated: (id: number) => void
   onChanged: () => void
+  onManageAll: () => void
 }) {
   const isOwner = summary.access === 'owner'
   const canEdit = summary.access !== 'view'
@@ -361,7 +364,7 @@ function ChecklistCard({
 
       {sharing && (
         <Modal title={`Share “${summary.title}”`} onClose={() => setSharing(false)} className="share-modal">
-          <SharePanel checklistId={summary.id} shares={shares} onChanged={onChanged} />
+          <SharePanel checklistId={summary.id} shares={shares} onChanged={onChanged} onManageAll={onManageAll} />
         </Modal>
       )}
     </div>

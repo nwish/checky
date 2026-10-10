@@ -1335,6 +1335,43 @@ select:focus {
   font-size: 0.82rem;
 }
 
+.share-inherited {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.share-inherited-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.share-inherited-header button.link {
+  margin: 0;
+  white-space: nowrap;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+}
+
+.share-access-text {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.share-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border: 1px solid var(--key-border);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--legend);
+}
+
 .share-access {
   display: flex;
   gap: 8px;
@@ -1375,6 +1412,16 @@ select:focus {
 
   .share-form button[type='submit'] {
     flex: 1 1 100%;
+  }
+
+  .share-row-inherited .share-access-text {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .share-row-inherited .share-badge {
+    grid-column: 3;
+    grid-row: 1;
   }
 }
 
