@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { api, type Share, type SharePermission, type ShareMode } from './api'
 import Avatar, { personName } from './Avatar'
 
@@ -20,20 +20,23 @@ export default function SharePanel({
   const [mode, setMode] = useState<ShareMode>('shared')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [addError, setAddError] = useState<string | null>(null)
+  const addErrorId = useId()
 
   const scoped = shares.filter((s) => s.checklistId === checklistId)
   // For a single list, other people may also have access through "share all".
   const inherited = checklistId === null ? [] : shares.filter((s) => s.checklistId === null && !scoped.some((p) => p.email === s.email))
 
-  async function run(action: () => Promise<unknown>) {
+  // Failures of the add form show under the email field (setAddError); other actions use the panel-level error.
+  async function run(action: () => Promise<unknown>, setFailure: (message: string | null) => void = setError) {
     setBusy(true)
-    setError(null)
+    setFailure(null)
     try {
       await action()
       onChanged()
       return true
     } catch (err) {
-      setError((err as Error).message)
+      setFailure((err as Error).message)
       return false
     } finally {
       setBusy(false)
@@ -44,7 +47,7 @@ export default function SharePanel({
     e.preventDefault()
     const target = email.trim()
     if (!target) return
-    if (await run(() => api.putShare(target, permission, mode, checklistId))) setEmail('')
+    if (await run(() => api.putShare(target, permission, mode, checklistId), setAddError)) setEmail('')
   }
 
   return (
@@ -93,12 +96,22 @@ export default function SharePanel({
         <input
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value)
+            setAddError(null)
+          }}
           placeholder="Email of an existing user"
           maxLength={254}
           required
           aria-label="Email to share with"
+          aria-invalid={addError !== null}
+          aria-describedby={addError ? addErrorId : undefined}
         />
+        {addError && (
+          <p id={addErrorId} className="error share-form-error" role="alert">
+            {addError}
+          </p>
+        )}
         <select value={permission} onChange={(e) => setPermission(e.target.value as SharePermission)} aria-label="Item access">
           <option value="view">View items</option>
           <option value="edit">Edit items</option>

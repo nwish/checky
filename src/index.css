@@ -1310,6 +1310,10 @@ select:focus {
   min-width: 0;
 }
 
+.share-form-error {
+  flex: 1 1 100%;
+}
+
 .share-legend {
   margin: 0;
   font-size: 0.82rem;
