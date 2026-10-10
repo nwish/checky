@@ -10,6 +10,7 @@ export default function AdminPage() {
   const [resending, setResending] = useState<string | null>(null)
   const [users, setUsers] = useState<AdminUser[] | null>(null)
   const [registrationOpen, setRegistrationOpen] = useState<boolean | null>(null)
+  const [registrationSaving, setRegistrationSaving] = useState(false)
   const [settingError, setSettingError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -22,14 +23,17 @@ export default function AdminPage() {
     setUsers(r.users)
   }
 
-  async function toggleRegistration() {
-    if (registrationOpen === null) return
+  async function setRegistration(next: boolean) {
+    if (registrationOpen === null || registrationSaving) return
+    setRegistrationSaving(true)
     setSettingError(null)
     try {
-      const s = await api.setRegistrationOpen(!registrationOpen)
+      const s = await api.setRegistrationOpen(next)
       setRegistrationOpen(s.registrationOpen)
     } catch (err) {
       setSettingError((err as Error).message)
+    } finally {
+      setRegistrationSaving(false)
     }
   }
 
@@ -109,9 +113,17 @@ export default function AdminPage() {
                 : 'Closed: new people join only by invitation.'}
             </p>
             {settingError && <p className="error">{settingError}</p>}
-            <button type="button" className="ghost" onClick={toggleRegistration} disabled={registrationOpen === null}>
-              {registrationOpen ? 'Close registration' : 'Open registration'}
-            </button>
+            <label className="registration-toggle">
+              <input
+                type="checkbox"
+                checked={registrationOpen ?? false}
+                disabled={registrationOpen === null || registrationSaving}
+                onChange={(e) => setRegistration(e.target.checked)}
+              />
+              <span className="registration-switch" aria-hidden="true" />
+              <span>Open registration</span>
+              <span className="registration-state">{registrationOpen === null ? 'Loading…' : registrationOpen ? 'Open' : 'Closed'}</span>
+            </label>
           </section>
         </div>
 
