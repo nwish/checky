@@ -83,24 +83,26 @@ export default function SharePanel({
             <li key={s.id} className="share-row">
               <Avatar person={s} className="sm" />
               <span className="share-email" title={s.email}>{s.name ? `${s.name} (${s.email})` : s.email}</span>
-              <select
-                value={s.permission}
-                disabled={busy}
-                onChange={(e) => run(() => api.putShare(s.email, e.target.value as SharePermission, s.mode, checklistId))}
-                aria-label={`Item access for ${s.email}`}
-              >
-                <option value="view">View items</option>
-                <option value="edit">Edit items</option>
-              </select>
-              <select
-                value={s.mode}
-                disabled={busy}
-                onChange={(e) => run(() => api.putShare(s.email, s.permission, e.target.value as ShareMode, checklistId))}
-                aria-label={`Run mode for ${s.email}`}
-              >
-                <option value="shared">Shared</option>
-                <option value="collaborative">Collaborative</option>
-              </select>
+              <div className="share-access">
+                <select
+                  value={s.permission}
+                  disabled={busy}
+                  onChange={(e) => run(() => api.putShare(s.email, e.target.value as SharePermission, s.mode, checklistId))}
+                  aria-label={`Item access for ${s.email}`}
+                >
+                  <option value="view">View items</option>
+                  <option value="edit">Edit items</option>
+                </select>
+                <select
+                  value={s.mode}
+                  disabled={busy}
+                  onChange={(e) => run(() => api.putShare(s.email, s.permission, e.target.value as ShareMode, checklistId))}
+                  aria-label={`Run mode for ${s.email}`}
+                >
+                  <option value="shared">Shared</option>
+                  <option value="collaborative">Collaborative</option>
+                </select>
+              </div>
               <button type="button" className="ghost" disabled={busy} onClick={() => remove(s)} aria-label={`Stop sharing with ${s.email}`}>
                 Remove
               </button>

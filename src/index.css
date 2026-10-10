@@ -1335,6 +1335,49 @@ select:focus {
   font-size: 0.82rem;
 }
 
+.share-access {
+  display: flex;
+  gap: 8px;
+}
+
+/* Narrow screens: each person becomes a small card — name and Remove on top, the two dropdowns
+   side by side below — and the Share button gets its own full-width row. */
+@media (max-width: 640px) {
+  .share-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding: 10px;
+    background: var(--chassis);
+    border: 1px solid var(--key-border);
+    border-radius: var(--radius-sm);
+  }
+
+  .share-row > button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .share-access {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .share-access select {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .share-access select,
+  .share-form select {
+    padding: 9px 4px 9px 9px;
+    font-size: 0.88rem;
+  }
+
+  .share-form button[type='submit'] {
+    flex: 1 1 100%;
+  }
+}
+
 .share-legend {
   margin: 0;
   font-size: 0.82rem;
