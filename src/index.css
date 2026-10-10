@@ -353,6 +353,44 @@ button.link:active {
   font-size: 0.74rem;
 }
 
+.nav-user-card {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.nav-user {
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-signout {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--key);
+  border: 1px solid var(--key-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-key-rest);
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.nav-signout svg {
+  width: 15px;
+  height: 15px;
+}
+
+.nav-signout:hover {
+  background: var(--key-hover);
+  color: var(--ink);
+}
+
 .nav-top-row {
   display: flex;
   align-items: center;
