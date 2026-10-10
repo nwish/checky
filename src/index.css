@@ -1015,6 +1015,64 @@ button.link:active {
   box-shadow: none;
 }
 
+.checklist-card-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.checklist-card-toggle:hover,
+.checklist-card-toggle:active {
+  background: none;
+  transform: none;
+  box-shadow: none;
+}
+
+.checklist-card-share {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  background: none;
+  border: none;
+  box-shadow: none;
+  border-radius: var(--radius-sm);
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.checklist-card-share:hover,
+.checklist-card-share:active {
+  background: var(--chassis);
+  color: var(--ink);
+  transform: none;
+  box-shadow: none;
+}
+
+.checklist-card-share svg {
+  width: 16px;
+  height: 16px;
+}
+
+.checklist-card-share-count {
+  color: var(--status);
+}
+
 .checklist-card-title {
   flex: 1;
   min-width: 0;
@@ -1149,22 +1207,6 @@ button.link:active {
 
 .checklist-delete:hover {
   color: var(--danger);
-}
-
-.checklist-share {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--dim);
-}
-
-.checklist-share:hover {
-  color: var(--ink);
-}
-
-.checklist-share svg {
-  width: 15px;
-  height: 15px;
 }
 
 .checklist-delete svg {

@@ -246,16 +246,38 @@ function ChecklistCard({
   }
 
   const HeaderIcon = checklistIcon(summary.icon)
+  // People with access to this list: shared on it directly, or through "Share all lists".
+  const sharedWith = new Set(shares.filter((s) => s.checklistId === summary.id || s.checklistId === null).map((s) => s.email)).size
 
   return (
     <div className="checklist-card">
-      <button type="button" className={`checklist-card-header${expanded ? ' open' : ''}`} onClick={onToggle}>
-        <span className="checklist-card-icon"><HeaderIcon /></span>
-        <span className="checklist-card-title">{summary.title}</span>
-        {!isOwner && <span className="checklist-card-meta share-owner">from {ownerLabel(summary)}</span>}
+      <div className={`checklist-card-header${expanded ? ' open' : ''}`} onClick={onToggle}>
+        {/* The toggle button gives keyboard users a focus target; a mouse click anywhere on the
+            row (including the count and chevron) reaches the row's onClick through bubbling. */}
+        <button type="button" className="checklist-card-toggle" aria-expanded={expanded}>
+          <span className="checklist-card-icon"><HeaderIcon /></span>
+          <span className="checklist-card-title">{summary.title}</span>
+          {!isOwner && <span className="checklist-card-meta share-owner">from {ownerLabel(summary)}</span>}
+        </button>
         <span className="checklist-card-meta">{summary.checkedCount}/{summary.itemCount}</span>
+        {isOwner && (
+          <button
+            type="button"
+            className="checklist-card-share"
+            aria-haspopup="dialog"
+            aria-label={sharedWith === 0 ? 'Share this list' : `Shared with ${sharedWith} ${sharedWith === 1 ? 'person' : 'people'}`}
+            title={sharedWith === 0 ? 'Share this list' : `Shared with ${sharedWith} ${sharedWith === 1 ? 'person' : 'people'}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              setSharing(true)
+            }}
+          >
+            {icons.share}
+            {sharedWith > 0 && <span className="checklist-card-share-count">{sharedWith}</span>}
+          </button>
+        )}
         <span className="checklist-card-chevron">{icons.chevron}</span>
-      </button>
+      </div>
 
       {expanded && (
         <div className="checklist-card-body">
@@ -324,12 +346,6 @@ function ChecklistCard({
           )}
 
           <div className="checklist-card-actions">
-            {isOwner && (
-              <button type="button" className="ghost checklist-share" onClick={() => setSharing(true)} aria-haspopup="dialog">
-                {icons.share}
-                Share
-              </button>
-            )}
             <button type="button" className="ghost" onClick={duplicateChecklist}>
               Duplicate
             </button>
