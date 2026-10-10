@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, type Checklist, type ChecklistSummary, type Share } from './api'
 import { ownerLabel } from './Avatar'
 import IconPicker from './IconPicker'
+import Modal from './Modal'
 import SharePanel from './SharePanel'
 import { checklistIcon, DEFAULT_CHECKLIST_ICON } from './icons'
 
@@ -9,6 +10,15 @@ const icons = {
   chevron: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="m6 9 6 6 6-6" />
+    </svg>
+  ),
+  share: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
     </svg>
   ),
   up: (
@@ -166,6 +176,7 @@ function ChecklistCard({
   const [checklist, setChecklist] = useState<Checklist | null>(null)
   const [titleDraft, setTitleDraft] = useState(summary.title)
   const [newItem, setNewItem] = useState('')
+  const [sharing, setSharing] = useState(false)
 
   useEffect(() => {
     setTitleDraft(summary.title)
@@ -312,14 +323,13 @@ function ChecklistCard({
             </form>
           )}
 
-          {isOwner && (
-            <div className="share-section">
-              <h4>Share this list</h4>
-              <SharePanel checklistId={summary.id} shares={shares} onChanged={onChanged} />
-            </div>
-          )}
-
           <div className="checklist-card-actions">
+            {isOwner && (
+              <button type="button" className="ghost checklist-share" onClick={() => setSharing(true)} aria-haspopup="dialog">
+                {icons.share}
+                Share
+              </button>
+            )}
             <button type="button" className="ghost" onClick={duplicateChecklist}>
               Duplicate
             </button>
@@ -331,6 +341,12 @@ function ChecklistCard({
             )}
           </div>
         </div>
+      )}
+
+      {sharing && (
+        <Modal title={`Share “${summary.title}”`} onClose={() => setSharing(false)} className="share-modal">
+          <SharePanel checklistId={summary.id} shares={shares} onChanged={onChanged} />
+        </Modal>
       )}
     </div>
   )

@@ -1151,6 +1151,22 @@ button.link:active {
   color: var(--danger);
 }
 
+.checklist-share {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--dim);
+}
+
+.checklist-share:hover {
+  color: var(--ink);
+}
+
+.checklist-share svg {
+  width: 15px;
+  height: 15px;
+}
+
 .checklist-delete svg {
   width: 15px;
   height: 15px;
@@ -1204,23 +1220,6 @@ select:focus {
 
 .share-access-note {
   margin: 12px 0 0;
-}
-
-.share-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 12px;
-}
-
-.share-section h4 {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--legend);
 }
 
 .share-panel {
@@ -1757,7 +1756,7 @@ select:focus {
   box-shadow: var(--shadow-key-pressed);
 }
 
-.icon-modal-backdrop {
+.modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 50;
@@ -1770,7 +1769,7 @@ select:focus {
   cursor: pointer;
 }
 
-.icon-modal {
+.modal {
   width: 100%;
   max-width: 420px;
   max-height: 80vh;
@@ -1783,7 +1782,11 @@ select:focus {
   cursor: auto;
 }
 
-.icon-modal-header {
+.share-modal {
+  max-width: 600px;
+}
+
+.modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1791,11 +1794,11 @@ select:focus {
   margin-bottom: 14px;
 }
 
-.icon-modal-header h2 {
+.modal-header h2 {
   margin: 0;
 }
 
-.icon-modal-close {
+.modal-close {
   flex-shrink: 0;
   display: flex;
   padding: 7px;
@@ -1807,19 +1810,19 @@ select:focus {
   transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, background 0.08s ease-out, color 0.08s ease-out;
 }
 
-.icon-modal-close svg {
+.modal-close svg {
   width: 16px;
   height: 16px;
 }
 
-.icon-modal-close:hover {
+.modal-close:hover {
   background: var(--key-hover);
   color: var(--ink);
   box-shadow: var(--shadow-key-hover);
   transform: translateY(-1px);
 }
 
-.icon-modal-close:active {
+.modal-close:active {
   transform: translateY(1px);
   box-shadow: var(--shadow-key-pressed);
 }
